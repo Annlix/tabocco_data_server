@@ -11,9 +11,10 @@ from commons.macro import *
 from tools.common_tools import get_current_ts
 from tools.upyun_tools import save_to_upyun
 from models import Database_session, Device_config, Device_data, Database_session_sunsheen
+from importlib import reload
 
 reload(sys)
-sys.setdefaultencoding('utf-8') 
+# sys.setdefaultencoding('utf-8')
 
 def create_engine(user, password, database, host = '127.0.0.1', port = 3306, **kw):
     params = dict(user = user, password = password, database = database, host = host, port = port)
