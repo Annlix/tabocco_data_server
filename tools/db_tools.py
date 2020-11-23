@@ -65,20 +65,12 @@ def get_latest_device_config_json(device_id):
             param['data'] = convert_data_config_new(data)
             param['image'] = convert_image_config_new(data)
             param['control'] = control
-<<<<<<< HEAD
             param['ts'] = get_current_ts()
-        # print(param)
         return json.dumps(param)
-=======
-            #param['ts'] = get_current_ts()
-            print(param)
-            return json.dumps(param)
->>>>>>> 95ad56ee1faf0a8719139ddc130d53b25e836d29
     except Exception as e:
         logging.info(e)
         return None
 
-<<<<<<< HEAD
 def get_latest_device_config_string(device_id):
     try:
         if not isinstance(device_id, int):
@@ -109,7 +101,7 @@ def get_latest_device_config_string(device_id):
         print(e)
         return None
         # raise e
-=======
+
 def convert_data_config(data):
     tmp_dict = {}
     for k, v in data.items():
@@ -190,7 +182,6 @@ def convert_image_config_new(data):
                 tmp['keys'][str(param['data_num'])] = param['key']
             config_list.append(tmp)
     return config_list
->>>>>>> 95ad56ee1faf0a8719139ddc130d53b25e836d29
 
 '''
 def get_latest_device_config_json(device_id):
@@ -366,10 +357,8 @@ if __name__ == '__main__':
     # })
 
     # save_json_data(json_data_to_save)
-<<<<<<< HEAD
     # get_latest_device_config_json(5)
     get_latest_device_config_string(5)
-=======
     test_config = {
         'key1':
             {
@@ -419,4 +408,3 @@ if __name__ == '__main__':
     }
     convert_data_config(test_config)
     convert_image_config(test_config)
->>>>>>> 95ad56ee1faf0a8719139ddc130d53b25e836d29
