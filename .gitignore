@@ -4,7 +4,8 @@
 *.log.*
 *.sh
 *.jpg
-macro.py
 test.py
 /__pycache__/
 /images/
+/.idea
+/.venv
