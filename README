@@ -47,3 +47,7 @@ json格式 Method键的值为pushImage，另外信息里面还包括要传的图
 服务器回复imageUploaded
 
 5.发送conf文件
+
+## Notice
+### Issues
+1. The stack_context module has removed in tornado 6.0+, so, DO NOT upgrade the tornado release, keep 5.1.1 is better.
