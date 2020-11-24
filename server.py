@@ -14,6 +14,10 @@ from tornado.escape import native_str
 from tornado.tcpserver import TCPServer
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
+import asyncio
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 # def handler_exception(handle_func):
