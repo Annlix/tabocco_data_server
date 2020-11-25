@@ -15,6 +15,7 @@ from tornado.tcpserver import TCPServer
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
+import demjson
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -80,7 +81,8 @@ class TornadoTCPConnection(object):
             data_str = native_str(data.decode('UTF-8'))
             logging.info(data_str)
             print(data_str)
-            tmp = json.loads(data_str)
+            # tmp = json.loads(data_str)
+            tmp = demjson.decode(data_str)
             for k, v in tmp.items():
                 self.json_request[k] = v
             if self.json_request.__contains__('method'):
@@ -267,6 +269,8 @@ def main():
     parser.add_argument('-p', '--port', type=int,
                         help='port to listen')
     args = parser.parse_args()
+    if args.port is None:
+        args.port = 8888
     # logging.basicConfig(level=logging.INFO)
     # log = logging.getLogger()
     # log.addHandler(get_log_file_handler("port:" + str(args.port) + ".log"))
