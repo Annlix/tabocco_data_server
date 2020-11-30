@@ -27,15 +27,16 @@ def create_engine(user, password, database, host = '127.0.0.1', port = 3306, **k
     return engine
 
 class database_resource:
-    def __init__(self, user=DATA_DB_USER, password=DATA_DB_PASSWORD, database=DATA_DB_NAME, host=DB_HOST, port=DB_HOST_PORT):
+    def __init__(self, user=DATA_DB_USER, password=DATA_DB_PASSWORD, database=DATA_DB_NAME, host=DB_HOST, port=DB_HOST_PORT, is_dict=False):
         self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
+        self.is_dict = is_dict
     def __enter__(self):
         self.conn = create_engine(self.user, self.password, self.database, self.host, self.port)
-        self.cursor = self.conn.cursor()
+        self.cursor = self.conn.cursor(dictionary=self.is_dict)
         return self.cursor
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.conn.commit()
@@ -48,11 +49,13 @@ def get_latest_device_config_json(device_id):
             device_id = int(device_id)
         param = {}
         logging.info(device_id)
-        with database_resource() as cursor:
-            sql = 'select `%s`, `%s`, `%s` from `%s` where `%s` = %d order by id desc'%('id', 'data', 'control', 'device_config', 'device_id', device_id)
+        with database_resource(is_dict=True) as cursor:
+            # sql = 'select `%s`, `%s`, `%s` from `%s` where `%s` = %d order by id desc'%('id', 'data', 'control', 'device_config', 'device_id', device_id)
+            sql = f"SELECT `id`, `data`, `control`, `device_config`, `device_id` WHERE `device_id` = {device_id}"
             logging.info(sql)
             cursor.execute(sql)
             value = cursor.fetchone()
+            print(value)
             device_config_id = value[0]
             data = json.loads(value[1])
             control = json.loads(value[2])
@@ -69,6 +72,7 @@ def get_latest_device_config_json(device_id):
             param['ts'] = get_current_ts()
         return json.dumps(param)
     except Exception as e:
+        print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
         logging.info(e)
         return None
 
@@ -106,7 +110,7 @@ def get_latest_device_config_string(device_id):
 def convert_data_config(data):
     tmp_dict = {}
     for k, v in data.items():
-        if v['port'] is not 'image':
+        if v['port'] != 'image':
             port = v['port']
             port_num = v['port_num']
             data_num = str(v['data_num'])

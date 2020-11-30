@@ -16,6 +16,7 @@ from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import demjson
+from pip._internal import req
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -88,22 +89,7 @@ class TornadoTCPConnection(object):
             if self.json_request.__contains__('method'):
                 email_producer.insert_into_redis(data_str, EMAIL_REDIS_LIST_KEY)
                 request = self.json_request['method']
-                # if request == 'push_data':
-                # 	self.on_push_data_request(self.json_request)
-                # elif request == 'push_data_size':
-                # 	print('here in push_data_size')
-                # 	self.on_push_data_size_request()
-                # elif request == 'pull_param':
-                # 	self.on_pull_param_request(self.json_request)
-                # elif request == 'push_image':
-                # 	logging.info('push_image')
-                # 	self.on_push_image_request(self.json_request)
-                # elif request == 'param_updated':
-                # 	logging.info('param_updated')
-                # 	self.close()
-                # elif request == 'close_connection':
-                # 	logging.info('close_connection')
-                # 	self.close()
+                # Upload the data
                 if request == 'push_data':
                     self.on_push_data_request(self.json_request)
                 elif request == 'push_data_size':
@@ -128,36 +114,61 @@ class TornadoTCPConnection(object):
                 self.on_error_request()
         except Exception as e:
             logging.info(e)
-            print(e)
+            # print(e)
+            print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
             self.on_error_request()
             raise e
 
     # directly call
     def on_push_data_size_request(self):
         self.stream.write(str.encode(get_reply_json(self.json_request)),
-                          callback=stack_context.wrap(self.wait_push_data_request))
+                          callback=stack_context.wrap(self.wait_push_data_request))    
+    
+    def validate_push_data_request(self, request):
+        return isinstance(request, dict) and \
+               'method' in request and \
+               request['method'] == 'push_data' and \
+               'device_id' in request and \
+               isinstance(request['device_id'], int) and \
+               'device_config_id' in request and \
+               isinstance(request['device_config_id'], int) and \
+               'package' in request and \
+               isinstance(request['package'], dict) 
 
     # directly call
     def on_push_data_request(self, request):
-        # add the redis part
-        redis_data_key = str(request['device_id']) + '-data'
-        for ts, data in request['package'].items():
-            data_t = get_data_to_save(request, ts, data)
-            logging.info(data_t)
-            producer.set_redis(data_t, redis_data_key)
-            producer.insert_into_redis(data_t, REDIS_LIST_KEY)
-        # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(self.wait_new_request))
-        self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
+        if self.validate_push_data_request(request):
+            # add the redis part
+            redis_data_key = str(request['device_id']) + '-data'
+            for ts, data in request['package'].items():
+                data_t = get_data_to_save(request, ts, data)
+                logging.info(data_t)
+                producer.set_redis(data_t, redis_data_key)
+                producer.insert_into_redis(data_t, REDIS_LIST_KEY)
+            # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(self.wait_new_request))
+            self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
+        else:
+            self.on_error_request()
+            
+    def validate_pull_param_request(self, request):
+        return isinstance(request, dict) and \
+               'device_id' in request and \
+               isinstance(request['device_id'], int) and \
+               'method' in request and \
+               'pull_param' == request['method']
 
     # directly call
     @run_on_executor
     def on_pull_param_request(self, request):
-        param = get_latest_device_config_json(request['device_id'])
-        logging.info("param:\n")
-        logging.info(param)
-        if param:
-            print(len(str.encode(param)))
-            self.stream.write(str.encode(param), callback=stack_context.wrap(self.wait_push_param_reply))
+        if self.validate_pull_param_request(request):
+            param = get_latest_device_config_json(request['device_id'])
+            logging.info("param:\n")
+            logging.info(param)
+            if param:
+                print(len(str.encode(param)))
+                self.stream.write(str.encode(param), callback=stack_context.wrap(self.wait_push_param_reply))
+            else:
+                self.on_error_request()
         else:
             self.on_error_request()
 
@@ -238,10 +249,10 @@ class TornadoTCPConnection(object):
 
     # directly call
     def on_update_time_request(self, request):
-        self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
+        self.stream.write(str.encode(str(get_reply_json(self.json_request))), callback=stack_context.wrap(self.close))
 
     def on_error_request(self):
-        self.stream.write(str.encode(get_reply_string(is_failed=True)), callback=stack_context.wrap(self.close))
+        self.stream.write(str.encode(str(get_reply_json(None, is_failed = True))), callback=stack_context.wrap(self.close))
 
     def clear_request_state(self):
         self._close_callback = None
@@ -274,6 +285,9 @@ def main():
     # logging.basicConfig(level=logging.INFO)
     # log = logging.getLogger()
     # log.addHandler(get_log_file_handler("port:" + str(args.port) + ".log"))
+    msg = f"Start the server on 127.0.0.1:{args.port}"
+    logging.info(msg)
+    print(msg)
     server = DataCollectionServer()
     server.listen(args.port)
     ioloop.IOLoop.instance().start()
@@ -284,6 +298,8 @@ if __name__ == "__main__":
         initialize_service_bash()
         main()
     except Exception as e:
-        logging.info("ocurred Exception: %s" % str(e))
-        # print ("ocurred Exception: %s" % str(e))
+        print(e.lineno)
+        logging.info("occurred Exception: %s" % str(e))
+        print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
+        print("occurred Exception: %s" % str(e))
         quit()

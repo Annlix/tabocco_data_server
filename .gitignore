@@ -9,3 +9,8 @@ test.py
 /images/
 /.idea
 /.venv
+/.kdev4
+.project
+.pydevproject
+/.settings
+*.kdev4
