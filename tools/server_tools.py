@@ -32,7 +32,6 @@ def get_reply_json(request=None, is_failed=False):
             if method == 'pushing_image':
                 reply['method'] = 'image_uploaded'
             if method == 'push_data_size':
-                print('here in get_reply_json')
                 reply['method'] = 'push_data_ready'
                 reply['device_id'] = request['device_id']
             if method == 'update_device_info':
@@ -40,7 +39,6 @@ def get_reply_json(request=None, is_failed=False):
                 reply['device_id'] = request['device_id']
             if method == 'update_time':
                 reply = {'ts': get_current_ts()}
-        print(reply)
         # reply_str = json.dumps(reply) + b'\x03'
         reply_str = demjson.encode(reply, encoding="utf8")
         email_producer.insert_into_redis(reply_str, macro.EMAIL_REDIS_LIST_KEY)

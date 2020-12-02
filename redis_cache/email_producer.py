@@ -12,14 +12,13 @@ from tools.common_tools import *
 
 def insert_into_redis(message, key):
 	if IS_NEED_EMAIL_ALERT:
+		message = str(message)
 		ts = get_datetime_str_from_ts(get_current_ts())
 		message = ts + message
-		print('insert_into_email_redis')
 		try:
 			if message:
-				redis_connection = redis.StrictRedis()
+				redis_connection = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
 				redis_connection.lpush(key, message)
-				print('after insert into email redis')
 				return True
 			else:
 				return False
@@ -41,12 +40,12 @@ def email_wrapper(func):
 			return result
 	return wrapper
 
-@email_wrapper
-def _test():
-	print('twestaetawetawtfgawetawet')
-	# return 'test'
-	raise Exception('asdfgasdfgasdfasdfasdfasdf')
-
-if __name__ == '__main__':
-	a = _test()
-	print(a)
+# @email_wrapper
+# def _test():
+# 	print('twestaetawetawtfgawetawet')
+# 	# return 'test'
+# 	raise Exception('asdfgasdfgasdfasdfasdfasdf')
+#
+# if __name__ == '__main__':
+# 	a = _test()
+# 	print(a)

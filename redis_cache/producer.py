@@ -9,11 +9,17 @@ sys.path.append('../')
 from commons.macro import *
 from tools.server_tools import *
 
+def connect_redis():
+    redis_connector = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_AUTH)
+    if redis_connector.ping():
+        return redis_connector
+    else:
+        raise Exception("Connect redis fail.")
 
 def insert_into_redis(data, key):
     try:
         if data:
-            redis_connection = redis.StrictRedis()
+            redis_connection = connect_redis()
             logging.info(key)
             logging.info(data)
             redis_connection.lpush(key, json.dumps(data))
@@ -29,7 +35,7 @@ def insert_into_redis(data, key):
 def set_redis(data, key):
     try:
         if data:
-            redis_connection = redis.StrictRedis(port=6378)
+            redis_connection = connect_redis()
             redis_connection.set(key, json.dumps(data))
             return True
         else:

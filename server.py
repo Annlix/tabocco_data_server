@@ -146,7 +146,10 @@ class TornadoTCPConnection(object):
                 producer.set_redis(data_t, redis_data_key)
                 producer.insert_into_redis(data_t, REDIS_LIST_KEY)
             # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(self.wait_new_request))
-            self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
+            reply = get_reply_json(self.json_request)
+            if isinstance(reply, str):
+                reply = reply.encode("utf-8")
+            self.stream.write(reply, callback=stack_context.wrap(self.wait_new_request))
         else:
             self.on_error_request()
             
@@ -162,6 +165,7 @@ class TornadoTCPConnection(object):
     def on_pull_param_request(self, request):
         if self.validate_pull_param_request(request):
             param = get_latest_device_config_json(request['device_id'])
+            print(param)
             logging.info("param:\n")
             logging.info(param)
             if param:
@@ -249,7 +253,8 @@ class TornadoTCPConnection(object):
 
     # directly call
     def on_update_time_request(self, request):
-        self.stream.write(str.encode(str(get_reply_json(self.json_request))), callback=stack_context.wrap(self.close))
+        reply = get_reply_json(self.json_request)
+        self.stream.write(reply, callback=stack_context.wrap(self.close))
 
     def on_error_request(self):
         self.stream.write(str.encode(str(get_reply_json(None, is_failed = True))), callback=stack_context.wrap(self.close))

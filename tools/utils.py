@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-    @brief Some assiant method
+    @brief Some assistant method
     @copyright bhyn
     @author km_xu<Annlix@outlook.com>
 
     PAY ATTENTION:
-    This project/application is not opensource.
+    This project/application is not open source.
 """
 
-from db_tools import database_resource
+from mysql.connector import connect
+from commons.macro import *
 from enum import Enum
 
 
@@ -19,6 +20,29 @@ class DataType(Enum):
     device_data = 'device_data'
     user = 'user'
     device_user = 'device_user'
+
+class utils():
+    
+    def __init__(self):
+        self.db_connector = connect(host=DB_HOST, port=DB_HOST_PORT, user=DATA_DB_USER, password=DATA_DB_PASSWORD, database='thcpn')
+        self.db_cursor = self.db_connector.cursor(dictionary=True)
+
+    @classmethod
+    def get_new_device_by_old_device(cls, old_device: int) -> int:
+        u = utils()
+        sql = f"SELECT * FROM `thcpn`.`mg_relation` WHERE `src` = {old_device} AND `type` = 'device'"
+        u.db_cursor.execute(sql)
+        row = u.db_cursor.fetchone()
+        new_device_id = row['des'] if row is not None else 0
+        return new_device_id
+
+    @classmethod
+    def get_new_device_config(cls, device: int)->int:
+        u = utils()
+        sql = f"SELECT * FROM `thcpn`.`device_config` WHERE `device_id` = {device} ORDER BY `updated_at` DESC LIMIT 1"
+        u.db_cursor.execute(sql)
+        row = u.db_cursor.fetchone()
+        return row['id'] if row is not None else 0
 
 
 def get_new_device_id_by_old_device(old_device_id: int) -> int:
@@ -45,3 +69,4 @@ def get_new_id_by_old(old_id: int, data_type: enumerate):
         row = cursor.fetchone()
         if (len(row) or row is not None) and row['des'] is not None:
             return row['des']
+
