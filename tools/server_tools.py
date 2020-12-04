@@ -74,14 +74,9 @@ def get_reply_string(request=None, is_failed=False):
 
 def get_data_to_save(request, ts, data):
     try:
-        tmp_data = {}
-        tmp_data['type'] = 'data'
-        tmp_data['device_id'] = request['device_id']
-        tmp_data['device_config_id'] = request['device_config_id']
-        tmp_data['data'] = data
+        tmp_data = {'type': 'data', 'device_id': request['device_id'], 'device_config_id': request['device_config_id'],
+                    'data': data, 'ts': get_datetime_str_from_ts(ts)}
         # add type of data
-        tmp_data['type'] = 'data'
-        tmp_data['ts'] = get_datetime_str_from_ts(ts)
         return tmp_data
     except Exception as e:
         logging.info(e)

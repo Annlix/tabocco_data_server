@@ -1,22 +1,20 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-import json
-import tornado
-import logging
 import argparse
 from tools import *
 from commons.macro import *
 from services import *
 from redis_cache import producer, email_producer
-from tornado import gen, ioloop, stack_context
+# from tornado import gen, ioloop, stack_context
+from tornado import gen, ioloop
 from tornado.escape import native_str
 from tornado.tcpserver import TCPServer
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import demjson
-from pip._internal import req
+from tornado.ioloop import IOLoop
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -36,11 +34,8 @@ if sys.platform == 'win32':
 #     return decorator
 
 class DataCollectionServer(TCPServer):
-    def __init__(self, io_loop=None, **kwargs):
-        TCPServer.__init__(self, io_loop=io_loop, **kwargs)
-
     def handle_stream(self, stream, address):
-        TornadoTCPConnection(stream, address, io_loop=self.io_loop)
+        TornadoTCPConnection(stream, address)
 
 
 class TornadoTCPConnection(object):
@@ -48,21 +43,20 @@ class TornadoTCPConnection(object):
     MAX_WORKERS = 10
     executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 
-    def __init__(self, stream, address, io_loop):
+    def __init__(self, stream, address):
         self.count = 0
         self.json_request = {}
         self.data_cache = {}
         self.stream = stream
         self.address = address
-        self.io_loop = io_loop
-        self.address_string = '{}:{}'.format(address[0], address[1])
-        logging.info('connected from %s' % (self.address_string))
+        self.address_string = f'{address[0]}:{address[1]}'
+        logging.info(f'connected from {self.address_string}')
         self.clear_request_state()
-        self.stream.set_close_callback(stack_context.wrap(self.on_connection_close))
-        self.timeout_handle = self.io_loop.add_timeout(self.io_loop.time() + TCP_CONNECTION_TIMEOUT,
-                                                       stack_context.wrap(self.on_timeout))
-        self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE,
-                               callback=stack_context.wrap(self.on_message_receive), partial=True)
+        # self.stream.set_close_callback(stack_context.wrap(self.on_connection_close))
+        # self.timeout_handle = self.io_loop.add_timeout(self.io_loop.time() + TCP_CONNECTION_TIMEOUT,
+        #                                                stack_context.wrap(self.on_timeout))
+        read_future = self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE, partial=True)
+        read_future.add_done_callback(self.on_message_receive)
 
     def wait_new_request(self):
         self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE,
@@ -77,16 +71,18 @@ class TornadoTCPConnection(object):
         logging.info('{} connection timeout.'.format(self.address_string))
 
     @email_producer.email_wrapper
-    def on_message_receive(self, data):
+    def on_message_receive(self, fu):
         try:
-            data_str = native_str(data.decode('UTF-8'))
-            logging.info(data_str)
-            print(data_str)
-            # tmp = json.loads(data_str)
+            data = fu.result()
+            data_str = data.decode('utf_8')
+            logging.info(f"Receive: {data_str}")
+            print(">>>>>>Receive", data_str, "======", sep="\n")
             tmp = demjson.decode(data_str)
+            print(tmp.items())
             for k, v in tmp.items():
                 self.json_request[k] = v
-            if self.json_request.__contains__('method'):
+            # if self.json_request.__contains__('method'):
+            if 'method' in self.json_request:
                 email_producer.insert_into_redis(data_str, EMAIL_REDIS_LIST_KEY)
                 request = self.json_request['method']
                 # Upload the data
@@ -122,8 +118,8 @@ class TornadoTCPConnection(object):
     # directly call
     def on_push_data_size_request(self):
         self.stream.write(str.encode(get_reply_json(self.json_request)),
-                          callback=stack_context.wrap(self.wait_push_data_request))    
-    
+                          callback=stack_context.wrap(self.wait_push_data_request))
+
     def validate_push_data_request(self, request):
         return isinstance(request, dict) and \
                'method' in request and \
@@ -133,26 +129,31 @@ class TornadoTCPConnection(object):
                'device_config_id' in request and \
                isinstance(request['device_config_id'], int) and \
                'package' in request and \
-               isinstance(request['package'], dict) 
+               isinstance(request['package'], dict)
 
-    # directly call
+        # directly call
+
     def on_push_data_request(self, request):
         if self.validate_push_data_request(request):
             # add the redis part
-            redis_data_key = str(request['device_id']) + '-data'
+            redis_data_key = f"{request['device_id']}-data"
             for ts, data in request['package'].items():
                 data_t = get_data_to_save(request, ts, data)
+                print("The data from get_data_to_save", data_t)
                 logging.info(data_t)
                 producer.set_redis(data_t, redis_data_key)
                 producer.insert_into_redis(data_t, REDIS_LIST_KEY)
-            # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(self.wait_new_request))
+            # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(
+            # self.wait_new_request))
             reply = get_reply_json(self.json_request)
             if isinstance(reply, str):
                 reply = reply.encode("utf-8")
-            self.stream.write(reply, callback=stack_context.wrap(self.wait_new_request))
+            self.stream.write(reply)
+            # self.stream.write(reply, callback=stack_context.wrap(self.wait_new_request))
         else:
+            print("Data valid failed")
             self.on_error_request()
-            
+
     def validate_pull_param_request(self, request):
         return isinstance(request, dict) and \
                'device_id' in request and \
@@ -257,7 +258,8 @@ class TornadoTCPConnection(object):
         self.stream.write(reply, callback=stack_context.wrap(self.close))
 
     def on_error_request(self):
-        self.stream.write(str.encode(str(get_reply_json(None, is_failed = True))), callback=stack_context.wrap(self.close))
+        self.stream.write(str.encode(str(get_reply_json(None, is_failed=True))),
+                          callback=stack_context.wrap(self.close))
 
     def clear_request_state(self):
         self._close_callback = None
@@ -267,7 +269,7 @@ class TornadoTCPConnection(object):
 
     def on_connection_close(self):
         if self.timeout_handle is not None:
-            self.io_loop.remove_timeout(self.timeout_handle)
+            # self.io_loop.remove_timeout(self.timeout_handle)
             self.timeout_handle = None
         if self._close_callback is not None:
             callback = self._close_callback
@@ -293,9 +295,10 @@ def main():
     msg = f"Start the server on 127.0.0.1:{args.port}"
     logging.info(msg)
     print(msg)
+    loop = IOLoop.current()
     server = DataCollectionServer()
     server.listen(args.port)
-    ioloop.IOLoop.instance().start()
+    loop.start()
 
 
 if __name__ == "__main__":
@@ -303,7 +306,6 @@ if __name__ == "__main__":
         initialize_service_bash()
         main()
     except Exception as e:
-        print(e.lineno)
         logging.info("occurred Exception: %s" % str(e))
         print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
         print("occurred Exception: %s" % str(e))

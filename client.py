@@ -7,13 +7,13 @@ import demjson
 
 class TestClient():
     menus = ["quit", "push_data", "push_data_size", "pull_param", "push_image", "update_device_info", "update_time", "param_updated", "close_connection"]
-    default_messages = dict(quit="{}", push_data = "{'device': 4, 'device_config_id': 1572, 'package': {1606979815: {'temp': 20, 'humidity': 30, 'soil_temp': 2.3}}}", push_data_size = "{}", push_image = "{}", update_device_info = "{}", update_time = "{}", param_updated = "{}", close_connection = "{}")
+    default_messages = dict(quit="{}", push_data = "{'device_id': 4, 'device_config_id': 1572, 'package': {'1606979815': {'temp': 20, 'humidity': 30, 'soil_temp': 2.3},'1606979816': {'temp': 20, 'humidity': 30, 'soil_temp': 2.3}}}", push_data_size = "{}", push_image = "{}", update_device_info = "{}", update_time = "{}", param_updated = "{}", close_connection = "{}")
     
     def __init__(self, args):
         self.config = vars(args)
         if self.config['method'] is None:
             menu = self.get_menu_choice()
-            if menu == 0:
+            if menu == 0 or menu == 'quit' :
                 exit()
             self.config['method'] = menu
         self.connect()
@@ -24,7 +24,7 @@ class TestClient():
             if len(rep) == 0:
                 break
             response += rep.decode("utf-8")
-        print(response)
+        print("Recv:", response)
 
     def connect(self):
         self.sock = socket.create_connection((self.config['host'], self.config['port']), timeout = 60)
@@ -33,6 +33,7 @@ class TestClient():
     def send_message(self):
         data = self.get_to_send_message()
         data = demjson.encode(data, 'utf-8')
+        print("Send:", data)
         self.sock.send(data)
     
     def get_to_send_message(self):
@@ -40,7 +41,7 @@ class TestClient():
         if len(data) != 0:
             data = demjson.decode(data, encoding='utf-8')
         else:
-            data = self.default_messages[self.config['method']]
+            data = demjson.decode(self.default_messages[self.config['method']])
         data = dict({"method": self.config['method']}, **data)
         return data
     
