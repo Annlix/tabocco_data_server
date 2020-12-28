@@ -13,7 +13,7 @@ from tornado.tcpserver import TCPServer
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
-import demjson
+import json
 from tornado.ioloop import IOLoop
 
 if sys.platform == 'win32':
@@ -77,7 +77,7 @@ class TornadoTCPConnection(object):
             data_str = data.decode('utf_8')
             logging.info(f"Receive: {data_str}")
             print(">>>>>>Receive", data_str, "======", sep="\n")
-            tmp = demjson.decode(data_str)
+            tmp = json.loads(data_str)
             print(tmp.items())
             for k, v in tmp.items():
                 self.json_request[k] = v
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         initialize_service_bash()
         main()
     except Exception as e:
-        logging.info("occurred Exception: %s" % str(e))
         print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
+        logging.info("occurred Exception: %s" % str(e))
         print("occurred Exception: %s" % str(e))
         quit()

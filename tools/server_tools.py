@@ -11,7 +11,7 @@ from commons import macro
 from tools.common_tools import *
 from tools.db_tools import *
 from redis_cache import email_producer
-import demjson
+import json
 
 
 def get_reply_json(request=None, is_failed=False):
@@ -40,13 +40,13 @@ def get_reply_json(request=None, is_failed=False):
             if method == 'update_time':
                 reply = {'ts': get_current_ts()}
         # reply_str = json.dumps(reply) + b'\x03'
-        reply_str = demjson.encode(reply, encoding="utf8")
+        reply_str = json.dumps(reply)
         email_producer.insert_into_redis(reply_str, macro.EMAIL_REDIS_LIST_KEY)
         return reply_str
     except Exception as e:
         logging.info(e)
         print(e)
-        return demjson.encode({'method': 'failed', 'ts': get_current_ts()})
+        return json.dumps({'method': 'failed', 'ts': get_current_ts()})
     # return json.dumps({'method':'failed','ts':get_current_ts()}) + b'\x03'
 
 

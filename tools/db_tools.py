@@ -6,7 +6,7 @@ import json
 import random
 import logging
 import mysql.connector
-import demjson
+import json
 from pip._internal.utils import temp_dir
 
 sys.path.append('../')
@@ -69,15 +69,15 @@ def get_latest_device_config_json(device_id):
             logging.info(sql)
             cursor.execute(sql)
             value = cursor.fetchone()
-            data = demjson.decode(value['data'], encoding='utf-8')
-            control = demjson.decode(value['data'], encoding='utf-8')
+            data = json.loads(value['data'], encoding='utf-8')
+            control = json.loads(value['data'], encoding='utf-8')
             param['device_id'] = device_id
             param['device_config_id'] = value['id']
             param['data'] = convert_data_config_new(data)
             param['image'] = convert_image_config_new(data)
             param['control'] = control
             param['ts'] = get_current_ts()
-        return demjson.encode(param)
+        return json.dumps(param)
     except Exception as e:
         print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
         logging.info(e)
@@ -261,8 +261,7 @@ def get_latest_device_config_json(device_id):
 
 def save_json_data(json_data):
     try:
-        # dict_data = json.loads(json_data)
-        dict_data = demjson.decode(json_data)
+        dict_data = json.loads(json_data)
         if not isinstance(dict_data['device_id'], int):
             dict_data['device_id'] = int(dict_data['device_id'])
         if not isinstance(dict_data['device_config_id'], int):

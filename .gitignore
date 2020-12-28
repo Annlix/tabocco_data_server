@@ -16,3 +16,5 @@ test.py
 *.kdev4
 *test*
 /.vs
+services/status_check.sh
+services/status_check_service.py
