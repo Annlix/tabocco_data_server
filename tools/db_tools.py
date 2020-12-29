@@ -62,15 +62,17 @@ def get_latest_device_config_json(device_id):
         param = {}
         logging.info(device_id)
         with database_resource(is_dict=True) as cursor:
-            # 获取设备的新的编号
-
-            # sql = 'select `%s`, `%s`, `%s` from `%s` where `%s` = %d order by id desc'%('id', 'data', 'control', 'device_config', 'device_id', device_id)
+            # Check if the device is exists
+            sql = f"SELECT * FROM `devices` WHERE `id` = 999"
+            cursor.execute(sql)
+            data = cursor.fetchall()
+            print(data)
             sql = f"SELECT `id`, `data`, `control`, `device_id` FROM `device_config` WHERE `device_id` = {device_id}"
             logging.info(sql)
             cursor.execute(sql)
             value = cursor.fetchone()
-            data = json.loads(value['data'], encoding='utf-8')
-            control = json.loads(value['data'], encoding='utf-8')
+            data = json.loads(value['data'])
+            control = json.loads(value['data'])
             param['device_id'] = device_id
             param['device_config_id'] = value['id']
             param['data'] = convert_data_config_new(data)

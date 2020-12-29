@@ -99,13 +99,13 @@ class TornadoTCPConnection(object):
                     self.on_push_data_size_request()
                 elif request == 'pull_param':
                     logging.info('pull_param')
-                    self.on_pull_param_request(self.json_request)
+                    await self.on_pull_param_request(self.json_request)
                 elif request == 'push_image':
                     # print('push_image')
                     logging.info('push_image')
                     self.on_push_image_request(self.json_request)
                 elif request == 'update_device_info':
-                    self.on_update_device_info_request()
+                    await self.on_update_device_info_request()
                 elif request == 'update_time':
                     await self.on_update_time_request(self.json_request)
                 elif request == 'param_updated':
@@ -139,7 +139,7 @@ class TornadoTCPConnection(object):
 
         # directly call
 
-    def on_push_data_request(self, request):
+    async def on_push_data_request(self, request):
         if self.validate_push_data_request(request):
             # add the redis part
             redis_data_key = f"{request['device_id']}-data"
@@ -157,8 +157,7 @@ class TornadoTCPConnection(object):
             self.stream.write(reply)
             # self.stream.write(reply, callback=stack_context.wrap(self.wait_new_request))
         else:
-            print("Data valid failed")
-            self.on_error_request()
+            await self.on_error_request()
 
     def validate_pull_param_request(self, request):
         return isinstance(request, dict) and \
@@ -168,20 +167,23 @@ class TornadoTCPConnection(object):
                'pull_param' == request['method']
 
     # directly call
-    @run_on_executor
-    def on_pull_param_request(self, request):
+    # @run_on_executor
+    async def on_pull_param_request(self, request):
         if self.validate_pull_param_request(request):
             param = get_latest_device_config_json(request['device_id'])
-            print(param)
             logging.info("param:\n")
             logging.info(param)
             if param:
                 print(len(str.encode(param)))
-                self.stream.write(str.encode(param), callback=stack_context.wrap(self.wait_push_param_reply))
+                if isinstance(param, str):
+                    param = param.encode('utf-8')
+                await self.stream.write(param)
+                self.close()
+                # self.stream.write(str.encode(param), callback=stack_context.wrap(self.wait_push_param_reply))
             else:
-                self.on_error_request()
+                await self.on_error_request()
         else:
-            self.on_error_request()
+            await self.on_error_request()
 
     # call back
     def receiving_data(self, data):
@@ -255,22 +257,35 @@ class TornadoTCPConnection(object):
             raise e
 
     # directly call
-    def on_update_device_info_request(self, request):
-        self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
+    async def on_update_device_info_request(self, request):
+        data = get_reply_json(self.json_request)
+        print(data)
+        # self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
+
+    def validate_update_time_request(self, request):
+        return isinstance(request, dict) and \
+               'method' in request and \
+               request['method'] == 'update_time'
 
     # directly call
     async def on_update_time_request(self, request):
-        reply = get_reply_json(self.json_request)
-        if isinstance(reply, str):
-            reply = reply.encode('utf-8')
-        # self.stream.write(reply, callback=stack_context.wrap(self.close))
-        await self.stream.write(reply)
-        print("Prerare close connection")
-        self.close()
+        if self.validate_update_time_request(request):
+            reply = get_reply_json(request)
+            if isinstance(reply, str):
+                reply = reply.encode('utf-8')
+            # self.stream.write(reply, callback=stack_context.wrap(self.close))
+            await self.stream.write(reply)
+            print("Prerare close connection")
+            self.close()
+        else:
+            await self.on_error_request()
 
-    def on_error_request(self):
-        self.stream.write(str.encode(str(get_reply_json(None, is_failed=True))),
-                          callback=stack_context.wrap(self.close))
+    async def on_error_request(self):
+        response = get_reply_json(None, is_failed=True)
+        if isinstance(response, str):
+            response = response.encode("utf-8")
+        await self.stream.write(response)
+        self.close()
 
     def clear_request_state(self):
         self._close_callback = None
@@ -317,7 +332,6 @@ if __name__ == "__main__":
         initialize_service_bash()
         main()
     except Exception as e:
-        print(e.lineno)
         print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
         logging.info("occurred Exception: %s" % str(e))
         print("occurred Exception: %s" % str(e))

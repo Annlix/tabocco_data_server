@@ -23,15 +23,15 @@ def get_reply_json(request=None, is_failed=False):
         else:
             method = request['method']
             reply = {'method': '', 'ts': get_current_ts()}
-            if method == 'push_data':
+            if method == 'push_data':  # Send data
                 reply['method'] = 'data_uploaded'
                 reply['device_id'] = request['device_id']
-            if method == 'push_image':
+            if method == 'push_image':  # Upload image
                 reply['method'] = 'push_image_ready'
                 reply['device_id'] = request['device_id']
-            if method == 'pushing_image':
+            if method == 'pushing_image':  # Uploading image
                 reply['method'] = 'image_uploaded'
-            if method == 'push_data_size':
+            if method == 'push_data_size':  # 
                 reply['method'] = 'push_data_ready'
                 reply['device_id'] = request['device_id']
             if method == 'update_device_info':
