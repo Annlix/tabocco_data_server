@@ -42,12 +42,12 @@ def initialize_service_bash():
     python_execution_path = sys.executable
     service_file_path = os.path.join(sys.path[0], 'services/status_check_service.py')
     service_bash_path = os.path.join(sys.path[0], 'services/status_check.sh')
-    bash_header = '#! /bin/bash'
+    bash_header = '#! /bin/bash' + '\n'
     bash_body = python_execution_path + ' ' + service_file_path
     with open(service_bash_path, 'wb+') as f:
-    	f.write(bash_header + '\n')
-    	f.write('\n')
-    	f.write(bash_body)
+    	f.write(bash_header.encode('utf-8'))
+    	f.write('\n'.encode('utf-8'))
+    	f.write(bash_body.encode('utf-8'))
     return
 
 

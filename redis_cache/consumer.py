@@ -19,7 +19,7 @@ redis_connector = None
 class RedisConsumer(object):
     """docstring for RedisConsumer"""
 
-    def __init__(self, db=None, key=None, host='localhost', port=6379):
+    def __init__(self, db=None, key=None, host=REDIS_HOST, port=REDIS_PORT):
         super(RedisConsumer, self).__init__()
         # self.redis_connection = redis.StrictRedis(host=host, port=port, db=db if db else REDIS_DB_NUM)
         self.redis_connection = redis.StrictRedis(host=host, port=port)

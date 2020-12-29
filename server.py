@@ -34,8 +34,9 @@ if sys.platform == 'win32':
 #     return decorator
 
 class DataCollectionServer(TCPServer):
-    def handle_stream(self, stream, address):
-        TornadoTCPConnection(stream, address)
+    async def handle_stream(self, stream, address):
+        server = TornadoTCPConnection(stream, address)
+        await server.get_request()
 
 
 class TornadoTCPConnection(object):
@@ -52,11 +53,18 @@ class TornadoTCPConnection(object):
         self.address_string = f'{address[0]}:{address[1]}'
         logging.info(f'connected from {self.address_string}')
         self.clear_request_state()
+        self.stream.set_close_callback(self.close_callback)
         # self.stream.set_close_callback(stack_context.wrap(self.on_connection_close))
         # self.timeout_handle = self.io_loop.add_timeout(self.io_loop.time() + TCP_CONNECTION_TIMEOUT,
         #                                                stack_context.wrap(self.on_timeout))
-        read_future = self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE, partial=True)
-        read_future.add_done_callback(self.on_message_receive)
+
+    def close_callback(self):
+        print("The connection have been closed.")
+
+    async def get_request(self):
+        data = await self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE, partial=True)
+        await self.on_message_receive(data)
+        # read_future.add_done_callback(self.on_message_receive)
 
     def wait_new_request(self):
         self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE,
@@ -71,14 +79,12 @@ class TornadoTCPConnection(object):
         logging.info('{} connection timeout.'.format(self.address_string))
 
     @email_producer.email_wrapper
-    def on_message_receive(self, fu):
+    async def on_message_receive(self, data):
         try:
-            data = fu.result()
             data_str = data.decode('utf_8')
             logging.info(f"Receive: {data_str}")
             print(">>>>>>Receive", data_str, "======", sep="\n")
             tmp = json.loads(data_str)
-            print(tmp.items())
             for k, v in tmp.items():
                 self.json_request[k] = v
             # if self.json_request.__contains__('method'):
@@ -101,7 +107,7 @@ class TornadoTCPConnection(object):
                 elif request == 'update_device_info':
                     self.on_update_device_info_request()
                 elif request == 'update_time':
-                    self.on_update_time_request(self.json_request)
+                    await self.on_update_time_request(self.json_request)
                 elif request == 'param_updated':
                     self.handle_param_updated(self.json_request)
                 elif request == 'close_connection':
@@ -110,7 +116,7 @@ class TornadoTCPConnection(object):
                 self.on_error_request()
         except Exception as e:
             logging.info(e)
-            # print(e)
+            print(e)
             print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
             self.on_error_request()
             raise e
@@ -253,9 +259,14 @@ class TornadoTCPConnection(object):
         self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
 
     # directly call
-    def on_update_time_request(self, request):
+    async def on_update_time_request(self, request):
         reply = get_reply_json(self.json_request)
-        self.stream.write(reply, callback=stack_context.wrap(self.close))
+        if isinstance(reply, str):
+            reply = reply.encode('utf-8')
+        # self.stream.write(reply, callback=stack_context.wrap(self.close))
+        await self.stream.write(reply)
+        print("Prerare close connection")
+        self.close()
 
     def on_error_request(self):
         self.stream.write(str.encode(str(get_reply_json(None, is_failed=True))),
@@ -306,6 +317,7 @@ if __name__ == "__main__":
         initialize_service_bash()
         main()
     except Exception as e:
+        print(e.lineno)
         print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
         logging.info("occurred Exception: %s" % str(e))
         print("occurred Exception: %s" % str(e))

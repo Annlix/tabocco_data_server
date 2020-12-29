@@ -45,7 +45,6 @@ def get_reply_json(request=None, is_failed=False):
         return reply_str
     except Exception as e:
         logging.info(e)
-        print(e)
         return json.dumps({'method': 'failed', 'ts': get_current_ts()})
     # return json.dumps({'method':'failed','ts':get_current_ts()}) + b'\x03'
 
