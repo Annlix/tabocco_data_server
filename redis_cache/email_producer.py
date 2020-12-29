@@ -17,7 +17,7 @@ def insert_into_redis(message, key):
 		message = ts + message
 		try:
 			if message:
-				redis_connection = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+				redis_connection = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_AUTH)
 				redis_connection.lpush(key, message)
 				return True
 			else:

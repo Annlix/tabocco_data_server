@@ -93,7 +93,7 @@ class TornadoTCPConnection(object):
                 request = self.json_request['method']
                 # Upload the data
                 if request == 'push_data':
-                    self.on_push_data_request(self.json_request)
+                    await self.on_push_data_request(self.json_request)
                 elif request == 'push_data_size':
                     print('here in push_data_size')
                     self.on_push_data_size_request()
@@ -144,6 +144,7 @@ class TornadoTCPConnection(object):
             # add the redis part
             redis_data_key = f"{request['device_id']}-data"
             for ts, data in request['package'].items():
+                print(ts, data)
                 data_t = get_data_to_save(request, ts, data)
                 print("The data from get_data_to_save", data_t)
                 logging.info(data_t)
@@ -151,7 +152,7 @@ class TornadoTCPConnection(object):
                 producer.insert_into_redis(data_t, REDIS_LIST_KEY)
             # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(
             # self.wait_new_request))
-            reply = get_reply_json(self.json_request)
+                reply = get_reply_json(self.json_request)
             if isinstance(reply, str):
                 reply = reply.encode("utf-8")
             self.stream.write(reply)

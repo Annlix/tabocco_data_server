@@ -21,6 +21,8 @@ def get_datetime_str_from_ts(ts):
     try:
         if python_version["major"] == 3:
             # Python 3
+            if isinstance(ts, str):
+                ts = int(ts)
             dt = datetime.datetime.utcfromtimestamp(ts) + datetime.timedelta(hours=8)
             dt_str = dt.strftime('%Y-%m-%d %H:%M:%S')
             return dt_str
@@ -40,7 +42,7 @@ def get_datetime_str_from_ts(ts):
             return dt_str
     except Exception as e:
         logging.info(e)
-        # print(e)
+        print(e)
         return ''
 
 

@@ -80,7 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('--db',
                         type=int,
                         help='redis db num',
-                        default=REDIS_DB)
+                        default=REDIS_DB_NUM)
     parser.add_argument('--key',
                         type=str,
                         help='read list key',
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--password',
                         type=str,
                         help='The password of redis auth',
-                        default=None)
+                        default=REDIS_AUTH)
     args = parser.parse_args()
     try:
         loop = asyncio.get_event_loop()

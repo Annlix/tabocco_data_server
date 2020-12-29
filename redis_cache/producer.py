@@ -4,6 +4,7 @@
 import sys
 import redis
 import logging
+import json
 
 sys.path.append('../')
 from commons.macro import *

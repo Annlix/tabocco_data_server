@@ -73,8 +73,11 @@ def get_reply_string(request=None, is_failed=False):
 
 def get_data_to_save(request, ts, data):
     try:
+        print("debug_ts", ts, get_datetime_str_from_ts(ts))
         tmp_data = {'type': 'data', 'device_id': request['device_id'], 'device_config_id': request['device_config_id'],
                     'data': data, 'ts': get_datetime_str_from_ts(ts)}
+        
+        print("tmp_data", tmp_data)
         # add type of data
         return tmp_data
     except Exception as e:
