@@ -41,7 +41,7 @@ class RedisConsumer(object):
                 pass
 
 
-def consumer(loop):
+def consumer():
     global redis_connector, redis_config
     if redis_connector is None:
         redis_connector = redis.Redis(host=redis_config['host'],
@@ -56,15 +56,6 @@ def consumer(loop):
         data = data[1]
         save_json_data(data)
     loop.call_later(1, consumer, loop)
-
-
-async def task(args, loop):
-    try:
-        global redis_config
-        redis_config = vars(args)
-        consumer(loop)
-    except Exception as e:
-        print(e)
 
 
 if __name__ == '__main__':
@@ -96,7 +87,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         loop = asyncio.get_event_loop()
-        loop.create_task(task(args, loop))
+        global redis_config
+        redis_config = vars(args)
+        loop.create_task(consumer())
         loop.run_forever()
     except Exception as e:
         print(e)

@@ -17,4 +17,6 @@ test.py
 *test*
 /.vs
 services/status_check.sh
-services/status_check_service.py
+/.vscode
+commons/macro.py
+*.bak
