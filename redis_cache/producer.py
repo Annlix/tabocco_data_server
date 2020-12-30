@@ -11,11 +11,14 @@ from commons.macro import *
 from tools.server_tools import *
 
 def connect_redis():
-    redis_connector = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_AUTH)
-    if redis_connector.ping():
-        return redis_connector
-    else:
-        raise Exception("Connect redis fail.")
+    try:
+        redis_connector = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, username=REDIS_USER, password=REDIS_PASSWORD)
+        if redis_connector.ping():
+            return redis_connector
+        else:
+            raise Exception("Connect redis fail.")
+    except Exception as e:
+        print(e)
 
 def insert_into_redis(data, key):
     try:
@@ -37,11 +40,15 @@ def set_redis(data, key):
     try:
         if data:
             redis_connection = connect_redis()
+            print(redis)
             redis_connection.set(key, json.dumps(data))
+            print(f"Save to {key}@Redis({REDIS_HOST}) SUCCESS")
             return True
         else:
+            print(f"Save to {key}@Redis({REDIS_HOST}) Fail")
             return False
     except Exception as e:
+        print(e)
         logging.info(e)
         return False
 

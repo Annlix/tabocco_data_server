@@ -41,7 +41,7 @@ class RedisConsumer(object):
                 pass
 
 
-def consumer():
+async def consumer():
     global redis_connector, redis_config
     if redis_connector is None:
         redis_connector = redis.Redis(host=redis_config['host'],
@@ -49,13 +49,11 @@ def consumer():
                                       username=redis_config['username'],
                                       password=redis_config['password'],
                                       db=redis_config['db'])
-    res = redis_connector.get('foo')
-    data = redis_connector.blpop(redis_config['key'])
-    print(data)
-    if data is not None:
-        data = data[1]
-        save_json_data(data)
-    loop.call_later(1, consumer, loop)
+    while True:
+        data = redis_connector.blpop(redis_config['key'])
+        if data is not None:
+            data = data[1]
+            save_json_data(data)
 
 
 if __name__ == '__main__':
@@ -79,15 +77,14 @@ if __name__ == '__main__':
     parser.add_argument('--username', '-u',
                         type=str,
                         help="The username of redis auth",
-                        default=None)
+                        default=REDIS_USER)
     parser.add_argument('--password',
                         type=str,
                         help='The password of redis auth',
-                        default=REDIS_AUTH)
+                        default=REDIS_PASSWORD)
     args = parser.parse_args()
     try:
         loop = asyncio.get_event_loop()
-        global redis_config
         redis_config = vars(args)
         loop.create_task(consumer())
         loop.run_forever()

@@ -96,35 +96,39 @@ class TornadoTCPConnection(object):
                     await self.on_push_data_request(self.json_request)
                 elif request == 'push_data_size':
                     print('here in push_data_size')
-                    self.on_push_data_size_request()
+                    await self.on_push_data_size_request(self.json_request)
                 elif request == 'pull_param':
                     logging.info('pull_param')
                     await self.on_pull_param_request(self.json_request)
                 elif request == 'push_image':
                     # print('push_image')
                     logging.info('push_image')
-                    self.on_push_image_request(self.json_request)
+                    await self.on_push_image_request(self.json_request)
                 elif request == 'update_device_info':
-                    await self.on_update_device_info_request()
+                    await self.on_update_device_info_request(self.json_request)
                 elif request == 'update_time':
                     await self.on_update_time_request(self.json_request)
-                elif request == 'param_updated':
-                    self.handle_param_updated(self.json_request)
-                elif request == 'close_connection':
-                    self.handle_close_connection(self.json_request)
+                # elif request == 'param_updated':
+                #     self.handle_param_updated(self.json_request)
+                # elif request == 'close_connection':
+                #     self.handle_close_connection(self.json_request)
             else:
                 self.on_error_request()
         except Exception as e:
             logging.info(e)
             print(e)
             print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
-            self.on_error_request()
+            await self.on_error_request()
             raise e
 
     # directly call
-    def on_push_data_size_request(self):
-        self.stream.write(str.encode(get_reply_json(self.json_request)),
-                          callback=stack_context.wrap(self.wait_push_data_request))
+    async def on_push_data_size_request(self, request):
+        # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(self.wait_push_data_request))
+        response = get_reply_json(request)
+        if isinstance(response, str):
+            response = response.encode("utf-8")
+        await self.stream.write(response)
+        self.close()
 
     def validate_push_data_request(self, request):
         return isinstance(request, dict) and \
@@ -172,8 +176,6 @@ class TornadoTCPConnection(object):
     async def on_pull_param_request(self, request):
         if self.validate_pull_param_request(request):
             param = get_latest_device_config_json(request['device_id'])
-            logging.info("param:\n")
-            logging.info(param)
             if param:
                 print(len(str.encode(param)))
                 if isinstance(param, str):
@@ -211,11 +213,15 @@ class TornadoTCPConnection(object):
                                        callback=stack_context.wrap(self.receiving_data), partial=True)
 
     # directly call
-    def on_push_image_request(self, request):
-        num_bytes = self.json_request['size']
+    async def on_push_image_request(self, request):
+        num_bytes = request['size']
         if isinstance(num_bytes, int) and num_bytes > 0:
-            self.stream.write(str.encode(get_reply_json(self.json_request)),
-                              callback=stack_context.wrap(self.start_receive_image_data))
+            response = get_reply_json(request)
+            if isinstance(response, str):
+                response = response.encode("utf-8")
+            print(response)
+            await self.stream.write(response)
+            await self.start_receive_image_data()
         else:
             self.on_error_request()
 
@@ -226,41 +232,49 @@ class TornadoTCPConnection(object):
                           callback=stack_context.wrap(self.start_receiving_image))
 
     # call back
-    def start_receive_image_data(self):
+    async def start_receive_image_data(self):
+        print(self.json_request['size'])
         self.json_request['method'] = 'pushing_image'
         # print('start_receive_image_data')
         logging.info('start_receive_image_data')
         logging.info('size:' + str(self.json_request['size']))
-        self.stream.read_bytes(num_bytes=self.json_request['size'],
-                               callback=stack_context.wrap(self.on_image_upload_complete), partial=False)
+        img_data = await self.stream.read_bytes(num_bytes=self.json_request['size'])
+        await self.on_image_upload_complete(img_data)
+        # await self.stream.read_bytes(num_bytes=)
+        # self.stream.read_bytes(num_bytes=self.json_request['size'],
+        #                        callback=stack_context.wrap(self.on_image_upload_complete), partial=False)
 
     # call back
-    @run_on_executor
-    @email_producer.email_wrapper
-    def on_image_upload_complete(self, data):
+    # @email_producer.email_wrapper
+    async def on_image_upload_complete(self, data):
         logging.info('here in on_image_upload_complete')
         try:
             filepath = check_device_img_file(self.json_request['device_id'])
             url = get_image_url_local(filepath, self.json_request['ts'])
             # url = get_image_url_local(filepath, self.json_request['acquisition_time'])
+            print(f"The file will be saved to {url}")
             save_image_local(data, url)
             self.json_request['image_info'] = {self.json_request['key']: {'value': url}}
             tmp_data = get_image_info_to_save(self.json_request)
+            print(tmp_data)
             producer.set_redis(tmp_data, str(self.json_request['device_id']) + '-image')
             if producer.insert_into_redis(tmp_data, REDIS_LIST_KEY):
-                self.stream.write(str.encode(get_reply_string(self.json_request)),
-                                  callback=stack_context.wrap(self.wait_new_request))
+                response = get_reply_string(self.json_request)
+                self.close()
             else:
-                self.on_error_request()
+                await self.on_error_request()
         except Exception as e:
             logging.info(e)
-            self.on_error_request()
+            await self.on_error_request()
             raise e
 
     # directly call
     async def on_update_device_info_request(self, request):
-        data = get_reply_json(self.json_request)
-        print(data)
+        response = get_reply_json(request)
+        if isinstance(response, str):
+            response = response.encode('utf-8')
+        await self.stream.write(response)
+        self.close()
         # self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
 
     def validate_update_time_request(self, request):

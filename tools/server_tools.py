@@ -42,7 +42,7 @@ def get_reply_json(request=None, is_failed=False):
         # reply_str = json.dumps(reply) + b'\x03'
         reply_str = json.dumps(reply)
         email_producer.insert_into_redis(reply_str, macro.EMAIL_REDIS_LIST_KEY)
-        return reply_str
+        return reply_str + '\x03'
     except Exception as e:
         logging.info(e)
         return json.dumps({'method': 'failed', 'ts': get_current_ts()})
@@ -88,6 +88,7 @@ def get_data_to_save(request, ts, data):
 
 def get_image_info_to_save(request):
     try:
+        print(request)
         if request:
             tmp_data = {}
             tmp_data['type'] = 'image'
@@ -102,6 +103,7 @@ def get_image_info_to_save(request):
         else:
             return None
     except Exception as e:
+        print(e)
         logging.info(e)
         email_producer.insert_into_redis(e, macro.EMAIL_REDIS_LIST_KEY)
         return None
