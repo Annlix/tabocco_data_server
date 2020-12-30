@@ -18,5 +18,4 @@ test.py
 /.vs
 services/status_check.sh
 /.vscode
-commons/macro.py
 *.bak
