@@ -18,8 +18,8 @@ def save_to_upyun(data):
     try:
         res = None
         image_data = data['data']
-        url_key = (image_data.keys())[0]
-        image_localpath = (image_data.values())[0]['value']
+        url_key = list((image_data.keys()))[0]
+        image_localpath = list(image_data.values())[0]['value']
         image_localpath_components = image_localpath.split('/')
         upyun_save_path = "/%s/%s"%(image_localpath_components[-2],
             image_localpath_components[-1])

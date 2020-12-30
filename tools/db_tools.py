@@ -279,6 +279,7 @@ def save_json_data(json_data):
             dict_data['device_config_id'] = new_config_id
             if dict_data['type'] == 'image':
                 if save_to_upyun(dict_data):
+                    Device_data.__table__.name = utils.get_data_table_name(dict_data)
                     device_image_data = Device_data(device_id=dict_data['device_id'],
                                                     device_config_id=dict_data['device_config_id'],
                                                     type=dict_data['type'], ts=dict_data['ts'], data=dict_data['data'])
@@ -288,6 +289,8 @@ def save_json_data(json_data):
                                                                  device_config_id=dict_data['device_config_id'],
                                                                  ts=dict_data['ts'], data=dict_data['data'])
                         save_json_data_sunsheen(device_image_data_sunsheen)
+                else:
+                    print("Save image to upyun fail")
             else:
                 Device_data.__table__.name = utils.get_data_table_name(dict_data)
                 device_value_data = Device_data(device_id=dict_data['device_id'],
