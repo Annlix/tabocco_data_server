@@ -17,6 +17,7 @@ from models import Database_session, Device_config, Device_data, Database_sessio
     device_config, Device
 from importlib import reload
 from tools.utils import *
+from tools.aliyun_tools import *
 
 reload(sys)
 
@@ -278,7 +279,10 @@ def save_json_data(json_data):
             dict_data['device_id'] = new_id
             dict_data['device_config_id'] = new_config_id
             if dict_data['type'] == 'image':
+                print("Before", dict_data)
                 if save_to_upyun(dict_data):
+                    AliyunOss.upload_image(dict_data)
+                    print("After", dict_data)
                     Device_data.__table__.name = utils.get_data_table_name(dict_data)
                     device_image_data = Device_data(device_id=dict_data['device_id'],
                                                     device_config_id=dict_data['device_config_id'],

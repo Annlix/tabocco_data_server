@@ -53,9 +53,9 @@ def save_to_upyun(data):
             return False
         else:
             # delete local image file
-            command = "rm -f %s"%(image_localpath)
-            if os.path.exists(image_localpath):
-                os.system(command)
+            # command = "rm -f %s"%(image_localpath)
+            # if os.path.exists(image_localpath):
+            #     os.system(command)
             # replace local path with remote path
             data['data'][url_key]['value'] = upyun_save_path
             return True
