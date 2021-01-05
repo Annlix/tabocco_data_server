@@ -81,7 +81,7 @@ class TornadoTCPConnection(object):
     @email_producer.email_wrapper
     async def on_message_receive(self, data):
         try:
-            data_str = data.decode('utf_8')
+            data_str = data.decode('utf-8')
             logging.info(f"Receive: {data_str}")
             print(">>>>>>Receive", data_str, "======", sep="\n")
             tmp = json.loads(data_str)
@@ -159,7 +159,8 @@ class TornadoTCPConnection(object):
                 reply = get_reply_json(self.json_request)
             if isinstance(reply, str):
                 reply = reply.encode("utf-8")
-            self.stream.write(reply)
+            await self.stream.write(reply)
+            self.close()
             # self.stream.write(reply, callback=stack_context.wrap(self.wait_new_request))
         else:
             await self.on_error_request()
