@@ -9,9 +9,12 @@
     This project/application is not open source.
 """
 
+import re
+import time
 from mysql.connector import connect
 from commons.macro import *
 from enum import Enum
+from datetime import datetime
 
 
 class DataType(Enum):
@@ -82,6 +85,10 @@ class utils():
     @classmethod
     def create_data_table(cls, ts):
         u = cls()
+	if isinstance(ts, str):
+            if re.match(r"^[0-9]+$", ts):
+                ts = int(ts)
+                ts = time.localtime(ts)
         start_date = datetime.strptime(ts.strftime("%Y-%m-01 00:00:00"), "%Y-%m-%d %H:%M:%S")
         end_date = datetime.strptime(ts.strftime(f"%Y-%m-{helper.get_last_day(ts)} 23:59:59"), "%Y-%m-%d %H:%M:%S")
         sql = f"INSERT INTO `{DATA_DB_NAME}`.`device_data_index` (`start_at`, `end_at`, `tb_name`) VALUE({start_date}, {end_date}, 'device_data_')"
