@@ -84,7 +84,7 @@ class TornadoTCPConnection(object):
             data_str = data.decode('utf-8')
             logging.info(f"Receive: {data_str}")
             print(">>>>>>Receive", data_str, "======", sep="\n")
-            tmp = json.loads(data_str)
+            tmp = json.loads(data_str, strict=False)
             for k, v in tmp.items():
                 self.json_request[k] = v
             # if self.json_request.__contains__('method'):
