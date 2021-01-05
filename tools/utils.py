@@ -88,10 +88,12 @@ class utils():
         if isinstance(ts, str):
             if re.match(r"^[0-9]+$", ts):
                 ts = int(ts)
-                ts = time.localtime(ts)
+                ts = datetime.fromtimestamp(ts)
+            else:
+                ts = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
         start_date = datetime.strptime(ts.strftime("%Y-%m-01 00:00:00"), "%Y-%m-%d %H:%M:%S")
-        end_date = datetime.strptime(ts.strftime(f"%Y-%m-{helper.get_last_day(ts)} 23:59:59"), "%Y-%m-%d %H:%M:%S")
-        sql = f"INSERT INTO `{DATA_DB_NAME}`.`device_data_index` (`start_at`, `end_at`, `tb_name`) VALUE({start_date}, {end_date}, 'device_data_')"
+        end_date = datetime.strptime(ts.strftime(f"%Y-%m-{cls.get_last_day(ts)} 23:59:59"), "%Y-%m-%d %H:%M:%S")
+        sql = f"INSERT INTO `{DATA_DB_NAME}`.`device_data_index` (`start_at`, `end_at`, `tb_name`) VALUE('{start_date}', '{end_date}', 'device_data_')"
         u.db_cursor.execute(sql)
         tb_id = u.db_cursor.lastrowid
         sql = f"UPDATE `{DATA_DB_NAME}`.`device_data_index` SET `tb_name` = 'device_data_{tb_id}' WHERE `id` = {tb_id}"
