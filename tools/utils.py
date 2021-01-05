@@ -85,7 +85,7 @@ class utils():
     @classmethod
     def create_data_table(cls, ts):
         u = cls()
-	if isinstance(ts, str):
+        if isinstance(ts, str):
             if re.match(r"^[0-9]+$", ts):
                 ts = int(ts)
                 ts = time.localtime(ts)
