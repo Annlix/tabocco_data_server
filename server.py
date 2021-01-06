@@ -261,6 +261,9 @@ class TornadoTCPConnection(object):
             producer.set_redis(tmp_data, str(self.json_request['device_id']) + '-image')
             if producer.insert_into_redis(tmp_data, REDIS_LIST_KEY):
                 response = get_reply_string(self.json_request)
+                if isinstance(response, str):
+                    response = response.encode('utf-8')
+                await self.stream.write(response)
                 self.close()
             else:
                 await self.on_error_request()
