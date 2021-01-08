@@ -6,7 +6,6 @@ from tools import *
 from commons.macro import *
 from services import *
 from redis_cache import producer, email_producer
-# from tornado import gen, ioloop, stack_context
 from tornado import gen, ioloop
 from tornado.escape import native_str
 from tornado.tcpserver import TCPServer
@@ -15,23 +14,11 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import json
 from tornado.ioloop import IOLoop
+import traceback
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-
-# def handler_exception(handle_func):
-#     def decorator(func):
-#         @wraps(func)
-#         def wrapper(*args, **kw):
-#         	try:
-#         		func(*args, **kw)
-#         	except Exception as e:
-#         		print(e)
-#         		print('wrappers')
-#         		handle_func()
-#         return wrapper
-#     return decorator
 
 class DataCollectionServer(TCPServer):
     async def handle_stream(self, stream, address):
@@ -51,12 +38,9 @@ class TornadoTCPConnection(object):
         self.stream = stream
         self.address = address
         self.address_string = f'{address[0]}:{address[1]}'
-        logging.info(f'connected from {self.address_string}')
+        logging.info(f'Connected from {self.address_string}')
         self.clear_request_state()
         self.stream.set_close_callback(self.close_callback)
-        # self.stream.set_close_callback(stack_context.wrap(self.on_connection_close))
-        # self.timeout_handle = self.io_loop.add_timeout(self.io_loop.time() + TCP_CONNECTION_TIMEOUT,
-        #                                                stack_context.wrap(self.on_timeout))
 
     def close_callback(self):
         print("The connection have been closed.")
@@ -64,15 +48,10 @@ class TornadoTCPConnection(object):
     async def get_request(self):
         data = await self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE, partial=True)
         await self.on_message_receive(data)
-        # read_future.add_done_callback(self.on_message_receive)
 
-    def wait_new_request(self):
-        self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE,
-                               callback=stack_context.wrap(self.on_message_receive), partial=True)
-
-    # call back
-    # def wait_push_data_request(self):
-    # 	self.stream.read_bytes(num_bytes = self.json_request['size'], callback=stack_context.wrap(self.on_message_receive), partial=False)
+    async def wait_new_request(self):
+        data = await self.stream.read_bytes(num_bytes=TornadoTCPConnection.MAX_SIZE)
+        await self.on_message_receive(data)
 
     def on_timeout(self):
         self.close()
@@ -82,32 +61,26 @@ class TornadoTCPConnection(object):
     async def on_message_receive(self, data):
         try:
             data_str = data.decode('utf-8')
-            logging.info(f"Receive: {data_str}")
-            print(">>>>>>Receive", data_str, "======", sep="\n")
+            logging.info(f"Received: {data_str}")
+            print(">>>>>> RECV", data_str, "======", sep="\n")
             tmp = json.loads(data_str, strict=False)
             for k, v in tmp.items():
                 self.json_request[k] = v
-            # if self.json_request.__contains__('method'):
             if 'method' in self.json_request:
                 email_producer.insert_into_redis(data_str, EMAIL_REDIS_LIST_KEY)
                 request = self.json_request['method']
-                # Upload the data
-                if request == 'push_data':
+                if request == 'update_time':
+                    await self.on_update_time_request(self.json_request)
+                elif request == 'pull_param':
+                    await self.on_pull_param_request(self.json_request)
+                elif request == 'push_data':
                     await self.on_push_data_request(self.json_request)
                 elif request == 'push_data_size':
-                    print('here in push_data_size')
                     await self.on_push_data_size_request(self.json_request)
-                elif request == 'pull_param':
-                    logging.info('pull_param')
-                    await self.on_pull_param_request(self.json_request)
                 elif request == 'push_image':
-                    # print('push_image')
-                    logging.info('push_image')
                     await self.on_push_image_request(self.json_request)
                 elif request == 'update_device_info':
                     await self.on_update_device_info_request(self.json_request)
-                elif request == 'update_time':
-                    await self.on_update_time_request(self.json_request)
                 # elif request == 'param_updated':
                 #     self.handle_param_updated(self.json_request)
                 # elif request == 'close_connection':
@@ -116,17 +89,32 @@ class TornadoTCPConnection(object):
                 self.on_error_request()
         except Exception as e:
             logging.info(e)
-            print(e)
-            print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
+            traceback.print_exc()
             await self.on_error_request()
             raise e
+    
+    def validate_update_time_request(self, request):
+        return isinstance(request, dict) and \
+               'method' in request and \
+               request['method'] == 'update_time'
+
+    async def on_update_time_request(self, request):
+        if self.validate_update_time_request(request):
+            reply = get_reply_json(request)
+            if isinstance(reply, str):
+                reply = reply.encode('utf-8')
+            print("<<<<<< SEND", reply, sep='\n')
+            await self.stream.write(reply)
+            self.close()
+        else:
+            await self.on_error_request()
 
     # directly call
     async def on_push_data_size_request(self, request):
-        # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(self.wait_push_data_request))
         response = get_reply_json(request)
         if isinstance(response, str):
             response = response.encode("utf-8")
+        print("<<<<<< SEND", response, sep='\n')
         await self.stream.write(response)
         self.close()
 
@@ -148,20 +136,16 @@ class TornadoTCPConnection(object):
             # add the redis part
             redis_data_key = f"{request['device_id']}-data"
             for ts, data in request['package'].items():
-                print(ts, data)
                 data_t = get_data_to_save(request, ts, data)
-                print("The data from get_data_to_save", data_t)
                 logging.info(data_t)
                 producer.set_redis(data_t, redis_data_key)
                 producer.insert_into_redis(data_t, REDIS_LIST_KEY)
-            # self.stream.write(str.encode(get_reply_json(self.json_request)), callback = stack_context.wrap(
-            # self.wait_new_request))
                 reply = get_reply_json(self.json_request)
             if isinstance(reply, str):
                 reply = reply.encode("utf-8")
+            print("<<<<<< SEND", reply, sep='\n')
             await self.stream.write(reply)
             self.close()
-            # self.stream.write(reply, callback=stack_context.wrap(self.wait_new_request))
         else:
             await self.on_error_request()
 
@@ -178,7 +162,6 @@ class TornadoTCPConnection(object):
         if self.validate_pull_param_request(request):
             param = get_latest_device_config_json(request['device_id'])
             if param:
-                print(len(str.encode(param)))
                 if isinstance(param, str):
                     param = param.encode('utf-8')
                 await self.stream.write(param)
@@ -220,7 +203,7 @@ class TornadoTCPConnection(object):
             response = get_reply_json(request)
             if isinstance(response, str):
                 response = response.encode("utf-8")
-            print(response)
+            print("<<<<<< SEND", response, sep='\n')
             await self.stream.write(response)
             await self.start_receive_image_data()
         else:
@@ -228,41 +211,32 @@ class TornadoTCPConnection(object):
 
     # directly call
     def handle_push_image(self, request):
-        print(request['method'])
         self.stream.write(str.encode(get_reply_string(self.json_request)),
                           callback=stack_context.wrap(self.start_receiving_image))
 
     # call back
     async def start_receive_image_data(self):
-        print(self.json_request['size'])
         self.json_request['method'] = 'pushing_image'
-        # print('start_receive_image_data')
         logging.info('start_receive_image_data')
         logging.info('size:' + str(self.json_request['size']))
         img_data = await self.stream.read_bytes(num_bytes=self.json_request['size'])
         await self.on_image_upload_complete(img_data)
-        # await self.stream.read_bytes(num_bytes=)
-        # self.stream.read_bytes(num_bytes=self.json_request['size'],
-        #                        callback=stack_context.wrap(self.on_image_upload_complete), partial=False)
 
     # call back
     # @email_producer.email_wrapper
     async def on_image_upload_complete(self, data):
-        logging.info('here in on_image_upload_complete')
         try:
             filepath = check_device_img_file(self.json_request['device_id'])
             url = get_image_url_local(filepath, self.json_request['ts'])
-            # url = get_image_url_local(filepath, self.json_request['acquisition_time'])
-            print(f"The file will be saved to {url}")
             save_image_local(data, url)
             self.json_request['image_info'] = {self.json_request['key']: {'value': url}}
             tmp_data = get_image_info_to_save(self.json_request)
-            print(tmp_data)
             producer.set_redis(tmp_data, str(self.json_request['device_id']) + '-image')
             if producer.insert_into_redis(tmp_data, REDIS_LIST_KEY):
                 response = get_reply_string(self.json_request)
                 if isinstance(response, str):
                     response = response.encode('utf-8')
+                print("<<<<<< SEND", response, sep='\n')
                 await self.stream.write(response)
                 self.close()
             else:
@@ -280,24 +254,6 @@ class TornadoTCPConnection(object):
         await self.stream.write(response)
         self.close()
         # self.stream.write(str.encode(get_reply_json(self.json_request)), callback=stack_context.wrap(self.close))
-
-    def validate_update_time_request(self, request):
-        return isinstance(request, dict) and \
-               'method' in request and \
-               request['method'] == 'update_time'
-
-    # directly call
-    async def on_update_time_request(self, request):
-        if self.validate_update_time_request(request):
-            reply = get_reply_json(request)
-            if isinstance(reply, str):
-                reply = reply.encode('utf-8')
-            # self.stream.write(reply, callback=stack_context.wrap(self.close))
-            await self.stream.write(reply)
-            print("Prerare close connection")
-            self.close()
-        else:
-            await self.on_error_request()
 
     async def on_error_request(self):
         response = get_reply_json(None, is_failed=True)
@@ -334,24 +290,27 @@ def main():
     args = parser.parse_args()
     if args.port is None:
         args.port = 8888
-    # logging.basicConfig(level=logging.INFO)
-    # log = logging.getLogger()
-    # log.addHandler(get_log_file_handler("port:" + str(args.port) + ".log"))
+    Log(port=args.port)
     msg = f"Start the server on 127.0.0.1:{args.port}"
     logging.info(msg)
     print(msg)
     loop = IOLoop.current()
     server = DataCollectionServer()
     server.listen(args.port)
+    logging.info("Server is running...")
     loop.start()
 
 
 if __name__ == "__main__":
     try:
+        logging.info("Server starting...")
         initialize_service_bash()
         main()
+    except KeyboardInterrupt:
+        logging.warn("Exit by ^C")
+        print("Exit by ^C")
+        quit()
     except Exception as e:
-        print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
+        traceback.print_exc()
         logging.info("occurred Exception: %s" % str(e))
-        print("occurred Exception: %s" % str(e))
         quit()

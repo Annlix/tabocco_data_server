@@ -13,6 +13,7 @@ import smtplib
 import sys
 sys.path.append('../')
 from commons.macro import *
+import traceback
 
 
 def _format_addr(s):
@@ -33,6 +34,6 @@ def send_alert_email(alert_message):
 			server.quit()
 			print('alert email send successfully')
 		except Exception as e:
-			print(e)
+			traceback.print_exc()
 			print('alert email send unsuccessfully')
 			server.quit()

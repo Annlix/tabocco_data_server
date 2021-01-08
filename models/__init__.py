@@ -60,5 +60,3 @@ class Database_session_sunsheen:
 if __name__ == '__main__':
     with Database_session() as session:
         result = session.query(Device).filter_by(id=1).first().device_configs
-        print(result[0].data)
-        print(result[0].control)

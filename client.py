@@ -4,6 +4,7 @@
 import socket
 import argparse
 import demjson
+import traceback
 
 class TestClient():
     menus = ["quit", "push_data", "push_data_size", "pull_param", "push_image", "update_device_info", "update_time", "param_updated", "close_connection"]
@@ -85,4 +86,4 @@ if __name__ == '__main__':
         args = parser.parse_args()
         TestClient(args)
     except Exception as e:
-        print(e)
+        traceback.print_exc()

@@ -9,3 +9,4 @@ from tools.log_tools import *
 from tools.server_tools import *
 from tools.email_tools import *
 from tools.upyun_tools import *
+from tools.Log import Log

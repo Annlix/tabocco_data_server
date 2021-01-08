@@ -36,7 +36,6 @@ class utils():
         sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {old_device} AND `type` = 'device'"
         u.db_cursor.execute(sql)
         row = u.db_cursor.fetchone()
-        print(row)
         new_device_id = row['des'] if row is not None else 0
         return new_device_id
 
@@ -44,7 +43,6 @@ class utils():
     def get_new_device_config(cls, device: int)->int:
         u = utils()
         sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_config` WHERE `device_id` = {device} ORDER BY `updated_at` DESC LIMIT 1"
-        print(sql)
         u.db_cursor.execute(sql)
         row = u.db_cursor.fetchone()
         return row['id'] if row is not None else 0

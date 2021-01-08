@@ -6,6 +6,7 @@ import json
 import redis
 import logging
 import argparse
+import traceback
 sys.path.append('../')
 from commons.macro import *
 # from tools.db_tools import save_json_data
@@ -24,12 +25,11 @@ class RedisConsumer(object):
 			try:
 				item=self.redis_connection.blpop(self.key)
 				logging.info('email consumer receive data!')
-				print('email consumer receive data!')
 				alert_message = item[1]
 				send_alert_email(alert_message)
 			except Exception as e:
 				logging.info(e)
-				print(e)
+				traceback.print_exc()
 				pass
 
 

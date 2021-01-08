@@ -9,6 +9,7 @@ sys.path.append('../')
 from commons.macro import *
 from tools.server_tools import *
 from tools.common_tools import *
+import traceback
 
 def insert_into_redis(message, key):
 	if IS_NEED_EMAIL_ALERT:
@@ -24,7 +25,7 @@ def insert_into_redis(message, key):
 				return False
 		except Exception as e:
 			logging.info(e)
-			print(e)
+			traceback.print_exc()
 			return False
 
 def email_wrapper(func):
@@ -35,17 +36,7 @@ def email_wrapper(func):
 			return result
 		except Exception as e:
 			logging.info(e)
-			print(e)
+			traceback.print_exc()
 			result = insert_into_redis(e, EMAIL_REDIS_LIST_KEY)
 			return result
 	return wrapper
-
-# @email_wrapper
-# def _test():
-# 	print('twestaetawetawtfgawetawet')
-# 	# return 'test'
-# 	raise Exception('asdfgasdfgasdfasdfasdfasdf')
-#
-# if __name__ == '__main__':
-# 	a = _test()
-# 	print(a)

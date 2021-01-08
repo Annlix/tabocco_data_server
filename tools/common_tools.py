@@ -5,6 +5,7 @@ import sys
 import time
 import logging
 import datetime
+import traceback
 
 is_python_3_5 = (sys.version[0:3] == '3.5')
 python_version = dict(
@@ -42,7 +43,7 @@ def get_datetime_str_from_ts(ts):
             return dt_str
     except Exception as e:
         logging.info(e)
-        print(e)
+        traceback.print_exc()
         return ''
 
 
@@ -56,6 +57,3 @@ def string2json(string):
 
 if __name__ == '__main__':
     ts = get_current_ts()
-    print(ts)
-    print(get_datetime_str_from_ts(ts))
-    print(get_datetime_str_from_ts(str(ts)))

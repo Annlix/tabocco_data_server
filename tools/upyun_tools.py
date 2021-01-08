@@ -9,6 +9,7 @@ import logging
 sys.path.append('../')
 from commons import macro
 from redis_cache import producer
+import traceback
 
 BUCKET = macro.UPYUN_BUCKET
 USERNAME = macro.UPYUN_USERNAME
@@ -28,7 +29,6 @@ def save_to_upyun(data):
         if os.path.exists(image_localpath):
             with open(image_localpath, 'rb') as f:
                 res = up.put(upyun_save_path, f)
-                print(res)
     except upyun.UpYunServiceException as se:
         print('Except an UpYunServiceException ...')
         logging.info('Except an UpYunServiceException ...')
@@ -45,7 +45,7 @@ def save_to_upyun(data):
         logging.info('Error Message: ' + ce.msg + '\n')
     except Exception as e:
         logging.info(e)
-        print(e)
+        traceback.print_exc()
     finally:
         # if upload operation error ocurred ,insert image info into redis again
         if res == None:

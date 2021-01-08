@@ -8,6 +8,7 @@ import logging
 import mysql.connector
 import json
 from pip._internal.utils import temp_dir
+import traceback
 
 sys.path.append('../')
 from commons.macro import *
@@ -64,11 +65,7 @@ def get_latest_device_config_json(device_id):
         logging.info(device_id)
         with database_resource(is_dict=True) as cursor:
             # Check if the device is exists
-            sql = f"SELECT * FROM `devices` WHERE `id` = 999"
-            cursor.execute(sql)
-            data = cursor.fetchall()
-            print(data)
-            sql = f"SELECT `id`, `data`, `control`, `device_id` FROM `device_config` WHERE `device_id` = {device_id}"
+            sql = f"SELECT * FROM `device_config` WHERE `device_id` = {device_id}"
             logging.info(sql)
             cursor.execute(sql)
             value = cursor.fetchone()
@@ -82,7 +79,7 @@ def get_latest_device_config_json(device_id):
             param['ts'] = get_current_ts()
         return json.dumps(param)
     except Exception as e:
-        print(e.__traceback__.tb_frame.f_globals["__file__"], e.__traceback__.tb_lineno, e)
+        traceback.print_exc()
         logging.info(e)
         return None
 
@@ -111,13 +108,11 @@ def get_latest_device_config_string(device_id):
                 param = param + '[' + str(k) + ']'
                 for key, value in v.items():
                     param = param + str(key) + '=' + str(value) + ';'
-        # print(param)
         return param + b'\x03'
     except Exception as e:
         logging.info(e)
-        print(e)
+        traceback.print_exc()
         return None
-        # raise e
 
 
 def convert_data_config(data):
@@ -174,7 +169,6 @@ def convert_image_config(data):
     tmp_list = []
     for value in tmp_dict.values():
         tmp_list.append(value)
-    print(tmp_list)
     return tmp_list
 
 
@@ -279,19 +273,19 @@ def save_json_data(json_data):
             dict_data['device_id'] = new_id
             dict_data['device_config_id'] = new_config_id
             if dict_data['type'] == 'image':
-                print("Before", dict_data)
                 if save_to_upyun(dict_data):
                     AliyunOss.upload_image(dict_data)
-                    print("After", dict_data)
                     Device_data.__table__.name = utils.get_data_table_name(dict_data)
                     device_image_data = Device_data(device_id=dict_data['device_id'],
                                                     device_config_id=dict_data['device_config_id'],
                                                     type=dict_data['type'], ts=dict_data['ts'], data=dict_data['data'])
+                    print("SAVED", device_image_data.__dict__)
                     session.add(device_image_data)
                     if dict_data['device_id'] == 54:
                         device_image_data_sunsheen = Device_data(device_id=dict_data['device_id'],
                                                                  device_config_id=dict_data['device_config_id'],
                                                                  ts=dict_data['ts'], data=dict_data['data'])
+                        print("SAVED", device_image_data_sunsheen.__dict__)
                         save_json_data_sunsheen(device_image_data_sunsheen)
                 else:
                     print("Save image to upyun fail")
@@ -302,17 +296,18 @@ def save_json_data(json_data):
                                                 device_config_id=dict_data['device_config_id'],
                                                 ts=dict_data['ts'],
                                                 data=dict_data['data'])
+                print("SAVED", device_value_data.__dict__)
                 session.add(device_value_data)
                 if dict_data['device_id'] == 54:
                     device_value_data_sunsheen = Device_data(device_id=dict_data['device_id'],
                                                              device_config_id=dict_data['device_config_id'],
                                                              ts=dict_data['ts'], data=dict_data['data'])
+                    print("SAVED", device_value_data_sunsheen.__dict__)
                     save_json_data_sunsheen(device_value_data_sunsheen)
-        print('after execution')
         logging.info('after execution')
     except Exception as e:
         logging.info(e)
-        print(e)
+        traceback.print_exc()
         pass
 
 
@@ -322,7 +317,7 @@ def save_json_data_sunsheen(data):
             session.add(data)
     except Exception as e:
         logging.info(e)
-        print(e)
+        traceback.print_exc()
         pass
 
 

@@ -6,6 +6,7 @@ import os
 import redis
 import argparse
 import asyncio
+import traceback
 
 if os.path.split(os.getcwd())[-1] == "redis_cache":
     sys.path.append("..")
@@ -25,19 +26,17 @@ class RedisConsumer(object):
         self.redis_connection = redis.StrictRedis(host=host, port=port)
         self.key = key if key else REDIS_LIST_KEY
         logging.info(self.key)
-        print(self.key)
 
     def start(self):
         while True:
             try:
                 item = self.redis_connection.blpop(self.key)
                 logging.info('redis consumer receive alert!')
-                print('redis consumer receive alert!')
                 json_data = item[1]
                 save_json_data(json_data)
             except Exception as e:
                 logging.info(e)
-                print(e)
+                traceback.print_exc()
                 pass
 
 
@@ -89,4 +88,4 @@ if __name__ == '__main__':
         loop.create_task(consumer())
         loop.run_forever()
     except Exception as e:
-        print(e)
+        traceback.print_exc()

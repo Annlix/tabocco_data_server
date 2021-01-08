@@ -5,6 +5,7 @@ import sys
 import redis
 import json
 import logging
+import traceback
 
 sys.path.append('../')
 from commons import macro
@@ -16,7 +17,6 @@ import json
 
 def get_reply_json(request=None, is_failed=False):
     try:
-        # print('line 1')
         reply = {}
         if is_failed:
             reply = {'method': 'failed', 'ts': get_current_ts()}
@@ -44,9 +44,9 @@ def get_reply_json(request=None, is_failed=False):
         email_producer.insert_into_redis(reply_str, macro.EMAIL_REDIS_LIST_KEY)
         return reply_str + '\x03'
     except Exception as e:
+        traceback.print_exc()
         logging.info(e)
-        return json.dumps({'method': 'failed', 'ts': get_current_ts()})
-    # return json.dumps({'method':'failed','ts':get_current_ts()}) + b'\x03'
+        return json.dumps({'method': 'failed', 'ts': get_current_ts()}) + '\x03'
 
 
 def get_reply_string(request=None, is_failed=False):
@@ -67,17 +67,18 @@ def get_reply_string(request=None, is_failed=False):
         return reply.encode('utf-8') + b'\x03'
     except Exception as e:
         logging.info(e)
-        print(e)
+        traceback.print_exc()
         return 'method:failed,ts:' + str(get_current_ts()) + b'\x03'
 
 
 def get_data_to_save(request, ts, data):
     try:
-        print("debug_ts", ts, get_datetime_str_from_ts(ts))
+        for item in data:
+            if not isinstance(data[item], dict) or 'value' not in data[item]:
+                data[item] = dict(value=item)
         tmp_data = {'type': 'data', 'device_id': request['device_id'], 'device_config_id': request['device_config_id'],
                     'data': data, 'ts': get_datetime_str_from_ts(ts)}
         
-        print("tmp_data", tmp_data)
         # add type of data
         return tmp_data
     except Exception as e:
@@ -88,7 +89,6 @@ def get_data_to_save(request, ts, data):
 
 def get_image_info_to_save(request):
     try:
-        print(request)
         if request:
             tmp_data = {}
             tmp_data['type'] = 'image'
@@ -103,7 +103,7 @@ def get_image_info_to_save(request):
         else:
             return None
     except Exception as e:
-        print(e)
+        traceback.print_exc()
         logging.info(e)
         email_producer.insert_into_redis(e, macro.EMAIL_REDIS_LIST_KEY)
         return None
@@ -128,10 +128,6 @@ def convert_request_to_dict(request):
 
 if __name__ == '__main__':
     # get_reply_json
-    print(get_reply_json(is_failed=True))
-    print(get_reply_json({"method": "push_data", "device_id": 1}))
-    print(get_reply_json({"method": "push_image", "device_id": 1}))
-    print(get_reply_json({"method": "pushing_image", "device_id": 1}))
     # get_data_to_save
     request = {
         'device_id': 1,

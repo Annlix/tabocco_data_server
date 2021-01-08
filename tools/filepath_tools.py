@@ -22,6 +22,4 @@ def get_image_url_server():
 
 if __name__ == '__main__':
 	filepath = check_device_img_file(3, create_if_nonexists = False)
-	print(filepath)
 	url = get_image_url_local(filepath, 123)
-	print(url)

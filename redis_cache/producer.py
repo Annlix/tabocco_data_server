@@ -5,6 +5,7 @@ import sys
 import redis
 import logging
 import json
+import traceback
 
 sys.path.append('../')
 from commons.macro import *
@@ -18,7 +19,7 @@ def connect_redis():
         else:
             raise Exception("Connect redis fail.")
     except Exception as e:
-        print(e)
+        traceback.print_exc()
 
 def insert_into_redis(data, key):
     try:
@@ -32,7 +33,7 @@ def insert_into_redis(data, key):
             return False
     except Exception as e:
         logging.info(e)
-        # print(e)
+        traceback.print_exc()
         return False
 
 
@@ -40,15 +41,12 @@ def set_redis(data, key):
     try:
         if data:
             redis_connection = connect_redis()
-            print(redis)
             redis_connection.set(key, json.dumps(data))
-            print(f"Save to {key}@Redis({REDIS_HOST}) SUCCESS")
             return True
         else:
-            print(f"Save to {key}@Redis({REDIS_HOST}) Fail")
             return False
     except Exception as e:
-        print(e)
+        traceback.print_exc()
         logging.info(e)
         return False
 
@@ -64,6 +62,4 @@ if __name__ == '__main__':
             'value': 5
         }
     }
-    # data_to_save = get_data_to_save(request, ts, data)
-    # print(data_to_save)
     set_redis("ttt", 'test')
