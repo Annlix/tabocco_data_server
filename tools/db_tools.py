@@ -73,8 +73,12 @@ def get_latest_device_config_json(device_id):
             control = json.loads(value['data'])
             param['device_id'] = device_id
             param['device_config_id'] = value['id']
-            param['data'] = convert_data_config_new(data)
-            param['image'] = convert_image_config_new(data)
+            if utils.check_config_version(data) == 'v1':
+                param['data'] = convert_data_config_new(data)
+                param['image'] = convert_image_config_new(data)
+            else:
+                param['data'] = convert_data_config(data)
+                param['image'] = convert_image_config(data)
             param['control'] = control
             param['ts'] = get_current_ts()
         return json.dumps(param)

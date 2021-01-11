@@ -120,6 +120,13 @@ class utils():
         row = u.db_cursor.fetchone()
         return row
 
+    @classmethod
+    def check_config_version(cls, config):
+        if isinstance(config, list):
+            for item in config:
+                return 'v2' if 'params' in item else 'v1'
+        return None
+        
 
 def get_new_device_id_by_old_device(old_device_id: int) -> int:
     if isinstance(old_device_id, int):
