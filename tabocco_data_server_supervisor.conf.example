@@ -1,0 +1,38 @@
+[group:iot_server_tcp]
+programs=iot_server_tcp_101,iot_server_tcp_102,iot_server_tcp_103,iot_server_tcp_104,iot_server_tcp_redis,iot_server_tcp_consumer
+
+[program:iot_server_tcp_101]
+directory=${SRC}
+command=$(which python3) server.py -p 10021
+stdout_logfile=${SRC}/logs/supervisor.log
+stderr_logfile=${SRC}/logs/supervisor.err
+
+[program:iot_server_tcp_102]
+directory=${SRC}
+command=$(which python3) server.py -p 10022
+stdout_logfile=${SRC}/logs/supervisor.log
+stderr_logfile=${SRC}/logs/supervisor.err
+
+[program:iot_server_tcp_103]
+directory=${SRC}
+command=$(which python3) server.py -p 10023
+stdout_logfile=${SRC}/logs/supervisor.log
+stderr_logfile=${SRC}/logs/supervisor.err
+
+[program:iot_server_tcp_104]
+directory=${SRC}
+command=$(which python3) server.py -p 10024
+stdout_logfile=${SRC}/logs/supervisor.log
+stderr_logfile=${SRC}/logs/supervisor.err
+
+[program:iot_server_tcp_redis]
+directory=${SRC}
+command=$(which redis-server) /etc/redis/redis.conf
+stdout_logfile=${SRC}/logs/supervisor_redis.log
+stderr_logfile=${SRC}/logs/supervisor_redis.err
+
+[program:iot_server_tcp_consumer]
+directory=${SRC}/redis_cache
+command=$(which python3) consumer.py
+stdout_logfile=${SRC}/logs/supervisor_consumer.log
+stderr_logfile=${SRC}/logs/supervisor_consumer.err

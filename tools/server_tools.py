@@ -15,11 +15,13 @@ from redis_cache import email_producer
 import json
 
 
-def get_reply_json(request=None, is_failed=False):
+def get_reply_json(request=None, is_failed=False, msg=None):
     try:
         reply = {}
         if is_failed:
             reply = {'method': 'failed', 'ts': get_current_ts()}
+            if msg is not None:
+                reply = dict(reply, **dict(msg=msg))
         else:
             method = request['method']
             reply = {'method': '', 'ts': get_current_ts()}
@@ -39,7 +41,6 @@ def get_reply_json(request=None, is_failed=False):
                 reply['device_id'] = request['device_id']
             if method == 'update_time':
                 reply = {'ts': get_current_ts()}
-        # reply_str = json.dumps(reply) + b'\x03'
         reply_str = json.dumps(reply)
         email_producer.insert_into_redis(reply_str, macro.EMAIL_REDIS_LIST_KEY)
         return reply_str + '\x03'

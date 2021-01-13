@@ -1,0 +1,32 @@
+load_module modules/ngx_stream_module.so;
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+    use epoll;
+}
+
+stream {
+    # Enumerate all the Tornado servers here
+    upstream tabocco_data_server {
+        server 127.0.0.1:10021;
+        server 127.0.0.1:10022;
+        server 127.0.0.1:10023;
+        server 127.0.0.1:10024;
+    }
+    
+    log_format  main  '$remote_addr [$time_local] '
+                      '$protocol $status $bytes_sent $bytes_received '
+                      '$session_time';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    server {
+        listen ${SERVER_INTERNAL_PORT};
+        proxy_pass tabocco_data_server;
+    }
+}

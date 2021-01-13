@@ -70,15 +70,17 @@ def get_latest_device_config_json(device_id):
             cursor.execute(sql)
             value = cursor.fetchone()
             data = json.loads(value['data'])
-            control = json.loads(value['data'])
+            control = json.loads(value['control'])
             param['device_id'] = device_id
             param['device_config_id'] = value['id']
-            if utils.check_config_version(data) == 'v1':
-                param['data'] = convert_data_config_new(data)
-                param['image'] = convert_image_config_new(data)
-            else:
-                param['data'] = convert_data_config(data)
-                param['image'] = convert_image_config(data)
+            param['data'] = data
+            param['image'] = json.loads(value['image'])
+            # if utils.check_config_version(data) == 'v1':
+            #     param['data'] = convert_data_config_new(data)
+            #     param['image'] = convert_image_config_new(data)
+            # else:
+            #     param['data'] = convert_data_config(data)
+            #     param['image'] = convert_image_config(data)
             param['control'] = control
             param['ts'] = get_current_ts()
         return json.dumps(param)
@@ -149,31 +151,34 @@ def convert_data_config(data):
         return tmp_list
 
 
-def convert_image_config(data):
+def convert_image_config(data, index=0):
     tmp_list = list()
-    tmp_dict = {}
-    for k, v in data.items():
-        if v['port'] == 'image':
-            port = v['port']
-            port_num = v['port_num']
-            data_num = str(v['data_num'])
-            desc = v['desc']
-            name = v['name']
-            sensor_type = v['sensor_type']
+    if isinstance(data, dict):
+        tmp_dict = {}
+        if data['port'] == 'image':
+            port = data['port'] if 'port' in data else None
+            port_num = data['port_num'] if 'port_num' in data else None
+            data_num = str(data['data_num']) if 'data_num' in data else None
+            desc = data['desc']  if 'desc' in data else None
+            name = data['name'] if 'name' in data else 'Unknown Name'
+            sensor_type = data['sensor_type'] if 'sensor_type' in data else None
             tmp_dict_key = name + str(port_num)
-            if tmp_dict.has_key(tmp_dict_key):
-                tmp_dict[tmp_dict_key]['keys'][data_num] = k
+            if tmp_dict_key in tmp_dict:
+                tmp_dict[tmp_dict_key]['keys'][data_num] = index
             else:
                 tmp_dict[tmp_dict_key] = {}
                 tmp_dict[tmp_dict_key]['port'] = port
                 tmp_dict[tmp_dict_key]['port_num'] = port_num
                 tmp_dict[tmp_dict_key]['sensor_type'] = sensor_type
                 tmp_dict[tmp_dict_key]['keys'] = {}
-                tmp_dict[tmp_dict_key]['keys'][data_num] = k
-    tmp_list = []
-    for value in tmp_dict.values():
-        tmp_list.append(value)
-    return tmp_list
+                tmp_dict[tmp_dict_key]['keys'][data_num] = index
+        for value in tmp_dict.values():
+            tmp_list.append(value)
+        return tmp_list
+    else:
+        for item in data:
+            tmp_list = tmp_list + convert_image_config(item, data.index(item))
+        return tmp_list
 
 
 def convert_data_config_new(data):
@@ -267,52 +272,59 @@ def save_json_data(json_data):
             dict_data['device_id'] = int(dict_data['device_id'])
         if not isinstance(dict_data['device_config_id'], int):
             dict_data['device_config_id'] = int(dict_data['device_config_id'])
-        with Database_session() as session:
-            new_id = utils.get_new_device_by_old_device(dict_data['device_id'])
-            if new_id == 0:
-                raise Exception("This device can't found in new database.")
-            new_config_id = utils.get_new_device_config(new_id)
-            if new_config_id == 0:
-                raise Exception("This device configure is not exists.")
-            dict_data['device_id'] = new_id
-            dict_data['device_config_id'] = new_config_id
-            if dict_data['type'] == 'image':
-                if save_to_upyun(dict_data):
-                    AliyunOss.upload_image(dict_data)
-                    Device_data.__table__.name = utils.get_data_table_name(dict_data)
-                    device_image_data = Device_data(device_id=dict_data['device_id'],
-                                                    device_config_id=dict_data['device_config_id'],
-                                                    type=dict_data['type'], ts=dict_data['ts'], data=dict_data['data'])
-                    print("SAVED", device_image_data.__dict__)
-                    session.add(device_image_data)
-                    if dict_data['device_id'] == 54:
-                        device_image_data_sunsheen = Device_data(device_id=dict_data['device_id'],
-                                                                 device_config_id=dict_data['device_config_id'],
-                                                                 ts=dict_data['ts'], data=dict_data['data'])
-                        print("SAVED", device_image_data_sunsheen.__dict__)
-                        save_json_data_sunsheen(device_image_data_sunsheen)
+        old_device_id = dict_data['device_id']
+        old_device_config_id = dict_data['device_config_id']
+        dict_data['device_id'] = utils.get_real_device(dict_data['device_id'])
+        dict_data['device_config_id'] = utils.get_real_config(dict_data['device_id'], dict_data['device_config_id'])
+        if dict_data['device_id'] is not None and dict_data['device_config_id'] is not None:
+            with Database_session() as session:
+                new_id = utils.get_new_device_by_old_device(dict_data['device_id'])
+                if new_id == 0:
+                    raise Exception("This device can't found in new database.")
+                new_config_id = utils.get_new_device_config(new_id)
+                if new_config_id == 0:
+                    raise Exception("This device configure is not exists.")
+                dict_data['device_id'] = new_id
+                dict_data['device_config_id'] = new_config_id
+                if dict_data['type'] == 'image':
+                    if save_to_upyun(dict_data):
+                        AliyunOss.upload_image(dict_data)
+                        Device_data.__table__.name = utils.get_data_table_name(dict_data)
+                        device_image_data = Device_data(device_id=dict_data['device_id'],
+                                                        device_config_id=dict_data['device_config_id'],
+                                                        type=dict_data['type'], ts=dict_data['ts'], data=dict_data['data'])
+                        print("SAVED", device_image_data.__dict__)
+                        session.add(device_image_data)
+                        if dict_data['device_id'] == 54:
+                            device_image_data_sunsheen = Device_data(device_id=dict_data['device_id'],
+                                                                    device_config_id=dict_data['device_config_id'],
+                                                                    ts=dict_data['ts'], data=dict_data['data'])
+                            print("SAVED", device_image_data_sunsheen.__dict__)
+                            save_json_data_sunsheen(device_image_data_sunsheen)
+                    else:
+                        print("Save image to upyun fail")
                 else:
-                    print("Save image to upyun fail")
-            else:
-                Device_data.__table__.name = utils.get_data_table_name(dict_data)
-                device_value_data = Device_data(device_id=dict_data['device_id'],
-                                                type=dict_data['type'],
-                                                device_config_id=dict_data['device_config_id'],
-                                                ts=dict_data['ts'],
-                                                data=dict_data['data'])
-                print("SAVED", device_value_data.__dict__)
-                session.add(device_value_data)
-                if dict_data['device_id'] == 54:
-                    device_value_data_sunsheen = Device_data(device_id=dict_data['device_id'],
-                                                             device_config_id=dict_data['device_config_id'],
-                                                             ts=dict_data['ts'], data=dict_data['data'])
-                    print("SAVED", device_value_data_sunsheen.__dict__)
-                    save_json_data_sunsheen(device_value_data_sunsheen)
-        logging.info('after execution')
+                    Device_data.__table__.name = utils.get_data_table_name(dict_data)
+                    device_value_data = Device_data(device_id=dict_data['device_id'],
+                                                    type=dict_data['type'],
+                                                    device_config_id=dict_data['device_config_id'],
+                                                    ts=dict_data['ts'],
+                                                    data=dict_data['data'])
+                    print("SAVED", device_value_data.__dict__)
+                    session.add(device_value_data)
+                    if dict_data['device_id'] == 54:
+                        device_value_data_sunsheen = Device_data(device_id=dict_data['device_id'],
+                                                                device_config_id=dict_data['device_config_id'],
+                                                                ts=dict_data['ts'], data=dict_data['data'])
+                        print("SAVED", device_value_data_sunsheen.__dict__)
+                        save_json_data_sunsheen(device_value_data_sunsheen)
+            logging.info('after execution')
+        else:
+            error_msg = dict(dict_data, **dict(old_device_id=old_device_id, old_device_config_id=old_device_config_id))
+            logging.error(f"Save data error because the device informaion is not match:{json.dumps(error_msg)}")
     except Exception as e:
         logging.info(e)
         traceback.print_exc()
-        pass
 
 
 def save_json_data_sunsheen(data):
