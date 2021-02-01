@@ -9,17 +9,19 @@ TCP_CONNECTION_TIMEOUT = 300
 REDIS_LIST_KEY = 'redis_list_key_balloon'
 EMAIL_REDIS_LIST_KEY = 'email_redis_list_key_balloon'
 REDIS_DB_NUM = 0
-REDIS_HOST = '127.0.0.1'
-REDIS_PORT = 6379
+# REDIS_HOST = '127.0.0.1'
+# REDIS_PORT = 6379
+REDIS_HOST = 'redis-14744.c53.west-us.azure.cloud.redislabs.com'
+REDIS_PORT = 14744
 REDIS_USER = None
-REDIS_PASSWORD = None
+REDIS_PASSWORD = 'Xzt970391472__!!__!!'
 
 # remote mysql5.7 config inner address
-DB_HOST = '127.0.0.1'
+DB_HOST = 'rm-bp19uqkfin5901ah6o.mysql.rds.aliyuncs.com'
 DB_HOST_PORT = 3306
 DATA_DB_USER = 'root'
-DATA_DB_PASSWORD = 'root'
-DATA_DB_NAME = 'table'
+DATA_DB_PASSWORD = 'Sonic513'
+DATA_DB_NAME = 'thcpn2'
 
 # remote upyun image storage config
 UPYUN_BUCKET = 'upyun_bucket'
