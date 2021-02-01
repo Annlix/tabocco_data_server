@@ -278,14 +278,14 @@ def save_json_data(json_data):
         dict_data['device_config_id'] = utils.get_real_config(dict_data['device_id'], dict_data['device_config_id'])
         if dict_data['device_id'] is not None and dict_data['device_config_id'] is not None:
             with Database_session() as session:
-                new_id = utils.get_new_device_by_old_device(dict_data['device_id'])
-                if new_id == 0:
-                    raise Exception("This device can't found in new database.")
-                new_config_id = utils.get_new_device_config(new_id)
-                if new_config_id == 0:
-                    raise Exception("This device configure is not exists.")
-                dict_data['device_id'] = new_id
-                dict_data['device_config_id'] = new_config_id
+                # new_id = utils.get_new_device_by_old_device(dict_data['device_id'])
+                # if new_id == 0:
+                #     raise Exception("This device can't found in new database.")
+                # new_config_id = utils.get_new_device_config(new_id)
+                # if new_config_id == 0:
+                #     raise Exception("This device configure is not exists.")
+                # dict_data['device_id'] = new_id
+                # dict_data['device_config_id'] = new_config_id
                 if dict_data['type'] == 'image':
                     if save_to_upyun(dict_data):
                         AliyunOss.upload_image(dict_data)

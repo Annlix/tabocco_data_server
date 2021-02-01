@@ -138,21 +138,18 @@ class TornadoTCPConnection(object):
             device_id = int(request['device_id'])
             device_info = utils.check_device_exists(device_id)
             if device_info != False:
-                if utils.check_device_config_exists(request['device_config_id'], device_info) != False:
-                    redis_data_key = f"{device_id}-data"
-                    for ts, data in request['package'].items():
-                        data_t = get_data_to_save(request, ts, data)
-                        logging.info(data_t)
-                        producer.set_redis(data_t, redis_data_key)
-                        producer.insert_into_redis(data_t, REDIS_LIST_KEY)
-                        reply = get_reply_json(self.json_request)
-                    if isinstance(reply, str):
-                        reply = reply.encode("utf-8")
-                    print("<<<<<< SEND", reply, sep='\n')
-                    await self.stream.write(reply)
-                    self.close()
-                else:
-                    await self.on_error_request(msg="The device config is not exists or can't match any device.")
+                redis_data_key = f"{device_id}-data"
+                for ts, data in request['package'].items():
+                    data_t = get_data_to_save(request, ts, data)
+                    logging.info(data_t)
+                    producer.set_redis(data_t, redis_data_key)
+                    producer.insert_into_redis(data_t, REDIS_LIST_KEY)
+                    reply = get_reply_json(self.json_request)
+                if isinstance(reply, str):
+                    reply = reply.encode("utf-8")
+                print("<<<<<< SEND", reply, sep='\n')
+                await self.stream.write(reply)
+                self.close()
             else:
                 await self.on_error_request(msg="The device is not exists")
         else:
@@ -207,6 +204,7 @@ class TornadoTCPConnection(object):
 
     # directly call
     async def on_push_image_request(self, request):
+        print(request)
         num_bytes = request['size']
         if isinstance(num_bytes, int) and num_bytes > 0:
             response = get_reply_json(request)

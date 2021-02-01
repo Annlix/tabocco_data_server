@@ -1,0 +1,34 @@
+version: '3.2'
+services: 
+  tabocco_data_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      labels: 
+        com.bhyn.description: "A data server implementd by TCP"
+        com.bhyn.department: "天临空地海一体化研究中心"
+        com.bhyn.copyright: "BHYN"
+        com.bhyn.author: "km_xu <Annlix@outlook.com>"
+        com.bhyn.maintainer: "km_xu <Annlix@outlook.com>"
+        com.bhyn.repository_uri: "https://github.com/Annlix/tabocco_data_server"
+      args: 
+        - APP_NAME
+        - SERVER_EXTERNAL_PORT
+        - SERVER_INTERNAL_PORT
+        - CLUSTER_START_PORT
+        - CLUSTER_NUM
+        - REDIS_EXTERNAL_PORT
+        - REDIS_INTERNAL_PORT
+        - SUPERVISOR_CTL_PORT
+        - REDIS_PASSWORD
+    image: ${APP_NAME}:${APP_VERSION}
+    container_name: ${APP_NAME}
+    env_file: 
+      - .docker-env
+    ports: 
+      - "${SERVER_EXTERNAL_PORT}:${SERVER_INTERNAL_PORT}"
+      - "${REDIS_EXTERNAL_PORT}:${REDIS_INTERNAL_PORT}"
+      - "${SUPERVISOR_CTL_PORT}:${SUPERVISOR_CTL_PORT}"
+    volumes:
+      - "./logs:/code/${APP_NAME}/logs"
+      - "./temp:/code/${APP_NAME}/temp"

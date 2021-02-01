@@ -11,6 +11,7 @@
 
 import re
 import time
+import sys
 from mysql.connector import connect
 from commons.macro import *
 from enum import Enum
@@ -114,10 +115,11 @@ class utils():
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """
         sql = sql.format(table_id=tb_id)
-        u.db_cursor.execute(sql)
+        print(u.db_cursor.execute(sql))
         sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_data_index` WHERE `start_at` <= '{ts}' AND `end_at` >= '{ts}' LIMIT 1"
         u.db_cursor.execute(sql)
         row = u.db_cursor.fetchone()
+        print(row)
         return row
 
     @classmethod
@@ -150,11 +152,20 @@ class utils():
         else:
             # Check the device version
             if res['version'] == '2.0':
-                return res
+                if isinstance(res, int):
+                    sql = f"SELECT * FROM `devices` WHERE `id` = {res}"
+                    u.db_cursor.execute(sql)
+                    res = u.db_cursor.fetchone()
+                else:
+                    return res
 
     @classmethod
     def check_device_config_exists(cls, device_config_id: int, device: dict):
         u = cls()
+        if isinstance(device, int):
+            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} LIMIT 1"
+            u.db_cursor.execute(sql)
+            device = u.db_cursor.fetchone()
         if device['version'] == '2.0':
             sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_config` WHERE `id` = {device_config_id} LIMIT 1"
             u.db_cursor.execute(sql)
@@ -187,11 +198,12 @@ class utils():
 
     @classmethod
     def get_real_device(cls, device):
-        t = type(device)
         if isinstance(device, int):
             device_id = device
+            t = 'int'
         elif isinstance(device, dict):
             device_id = device['id']
+            t = 'dict'
         device_info = cls.check_device_exists(device_id)
         if not device_info == False:
             return device_info['id'] if t == 'int' else device_info
@@ -200,12 +212,13 @@ class utils():
     
     @classmethod
     def get_real_config(cls, device_config, device):
-        t = type(device_config)
-        if isinstance(device_config, id):
+        if isinstance(device_config, int):
             device_config_id = device_config
+            t = 'int'
         elif isinstance(device_config, dict):
             device_config_id = device_config['id']
-        if isinstance(device, id):
+            t = 'dict'
+        if isinstance(device, int):
             device_id = device
         elif isinstance(device, dict):
             device_id = device['id']

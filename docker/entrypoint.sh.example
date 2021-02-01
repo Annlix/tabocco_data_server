@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+
+$(which python3) $(which supervisord) -j /var/run/supervisor.pid -c /etc/supervisor/supervisor.conf
+$(which redis-server) /etc/redis/redis.conf
+$(which nginx) -g "daemon off;"
+
+exec "$@"
