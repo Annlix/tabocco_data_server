@@ -136,7 +136,7 @@ class utils():
         u.db_cursor.execute(sql)
         res = u.db_cursor.fetchone()
         if res is None or not res['version'] == '2.0':
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} LIMIT 1"
+            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} AND `type` = 'device' LIMIT 1"
             u.db_cursor.execute(sql)
             res = u.db_cursor.fetchone()
             if res is None:
@@ -178,7 +178,7 @@ class utils():
                 else:
                     return False
         else:
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device_config_id} LIMIT 1"
+            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device_config_id} AND `type` = 'device_config' LIMIT 1"
             u.db_cursor.execute(sql)
             res = u.db_cursor.fetchone()
             if res is None:
@@ -211,7 +211,7 @@ class utils():
             return None
     
     @classmethod
-    def get_real_config(cls, device_config, device):
+    def get_real_config(cls, device, device_config):
         if isinstance(device_config, int):
             device_config_id = device_config
             t = 'int'
