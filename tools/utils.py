@@ -214,6 +214,8 @@ class utils():
     @classmethod
     def get_real_device(cls, device):
         try:
+            if device is None:
+                return None
             if isinstance(device, int):
                 device_id = device
                 t = 'int'
@@ -232,6 +234,8 @@ class utils():
     @classmethod
     def get_real_config(cls, device, device_config):
         try:
+            if device is None or device_config is None:
+                return None
             if isinstance(device_config, int):
                 device_config_id = device_config
                 t = 'int'

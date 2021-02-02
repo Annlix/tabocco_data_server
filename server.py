@@ -131,13 +131,35 @@ class TornadoTCPConnection(object):
 
         # directly call
 
+    # async def on_push_data_request(self, request):
+    #     if self.validate_push_data_request(request):
+    #         # add the redis part
+    #         # Check the device is exists
+    #         device_id = int(request['device_id'])
+    #         device_info = utils.check_device_exists(device_id)
+    #         if device_info != False:
+    #             redis_data_key = f"{device_id}-data"
+    #             for ts, data in request['package'].items():
+    #                 data_t = get_data_to_save(request, ts, data)
+    #                 logging.info(data_t)
+    #                 producer.set_redis(data_t, redis_data_key)
+    #                 producer.insert_into_redis(data_t, REDIS_LIST_KEY)
+    #                 reply = get_reply_json(self.json_request)
+    #             if isinstance(reply, str):
+    #                 reply = reply.encode("utf-8")
+    #             print("<<<<<< SEND", reply, sep='\n')
+    #             await self.stream.write(reply)
+    #             self.close()
+    #         else:
+    #             await self.on_error_request(msg="The device is not exists")
+    #     else:
+    #         await self.on_error_request()
+
     async def on_push_data_request(self, request):
-        if self.validate_push_data_request(request):
-            # add the redis part
-            # Check the device is exists
-            device_id = int(request['device_id'])
-            device_info = utils.check_device_exists(device_id)
-            if device_info != False:
+        try:
+            if self.validate_push_data_request(request):
+                # add the redis part
+                device_id = int(request['device_id'])
                 redis_data_key = f"{device_id}-data"
                 for ts, data in request['package'].items():
                     data_t = get_data_to_save(request, ts, data)
@@ -151,8 +173,9 @@ class TornadoTCPConnection(object):
                 await self.stream.write(reply)
                 self.close()
             else:
-                await self.on_error_request(msg="The device is not exists")
-        else:
+                await self.on_error_request()
+        except:
+            traceback.print_exc()
             await self.on_error_request()
 
     def validate_pull_param_request(self, request):

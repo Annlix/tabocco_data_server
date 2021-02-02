@@ -15,7 +15,7 @@ from commons.macro import *
 from tools.common_tools import get_current_ts
 from tools.upyun_tools import save_to_upyun
 from models import Database_session, Device_config, Device_data, Database_session_sunsheen, \
-    device_config, Device
+    device_config, Device, Device_data_confirm
 from importlib import reload
 from tools.utils import *
 from tools.aliyun_tools import *
@@ -276,8 +276,8 @@ def save_json_data(json_data):
         old_device_config_id = dict_data['device_config_id']
         dict_data['device_id'] = utils.get_real_device(dict_data['device_id'])
         dict_data['device_config_id'] = utils.get_real_config(dict_data['device_id'], dict_data['device_config_id'])
-        if dict_data['device_id'] is not None and dict_data['device_config_id'] is not None:
-            with Database_session() as session:
+        with Database_session() as session:
+            if dict_data['device_id'] is not None and dict_data['device_config_id'] is not None:
                 # new_id = utils.get_new_device_by_old_device(dict_data['device_id'])
                 # if new_id == 0:
                 #     raise Exception("This device can't found in new database.")
@@ -318,10 +318,17 @@ def save_json_data(json_data):
                                                                 ts=dict_data['ts'], data=dict_data['data'])
                         print("SAVED", device_value_data_sunsheen.__dict__)
                         save_json_data_sunsheen(device_value_data_sunsheen)
-            logging.info('after execution')
-        else:
-            error_msg = dict(dict_data, **dict(old_device_id=old_device_id, old_device_config_id=old_device_config_id))
-            logging.error(f"Save data error because the device informaion is not match:{json.dumps(error_msg)}")
+                logging.info('after execution')
+            else:
+                device_data_confirm = Device_data_confirm(source_device_id = old_device_id, 
+                                                      source_config_id = old_device_config_id, 
+                                                      new_device_id = dict_data['device_id'],
+                                                      new_config_id = dict_data['device_config_id'],
+                                                      data = dict_data['data'],
+                                                      ts = dict_data['ts'])
+                session.add(device_data_confirm)
+                error_msg = dict(dict_data, **dict(old_device_id=old_device_id, old_device_config_id=old_device_config_id))
+                logging.error(f"Save data error because the device informaion is not match:{json.dumps(error_msg)}")
     except Exception as e:
         logging.info(e)
         traceback.print_exc()
