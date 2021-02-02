@@ -122,11 +122,11 @@ class utils():
         """
         sql = sql.format(table_id=tb_id)
         print(u.db_cursor.execute(sql))
-        sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_data_index` WHERE `start_at` <= '{ts}' AND `end_at` >= '{ts}' LIMIT 1"
+        sql = f"SELECT `tb_name` FROM `{DATA_DB_NAME}`.`device_data_index` WHERE `start_at` <= '{ts}' AND `end_at` >= '{ts}' LIMIT 1"
         u.db_cursor.execute(sql)
         row = u.db_cursor.fetchone()
         print(row)
-        return row
+        return row['tb_name']
 
     @classmethod
     def check_config_version(cls, config):
