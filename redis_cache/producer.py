@@ -41,6 +41,8 @@ def set_redis(data, key):
     try:
         if data:
             redis_connection = connect_redis()
+            if not isinstance(data, str):
+                data = json.dumps(data)
             redis_connection.set(key, json.dumps(data))
             return True
         else:

@@ -16,6 +16,8 @@ from mysql.connector import connect
 from commons.macro import *
 from enum import Enum
 from datetime import datetime
+from exceptions import *
+import traceback
 
 
 class DataType(Enum):
@@ -50,15 +52,19 @@ class utils():
     
     @classmethod
     def get_data_table_name(cls, data):
-        u = cls()
-        ts = data['ts']
-        sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_data_index` WHERE `start_at` <= '{ts}' AND `end_at` >= '{ts}' LIMIT 1"
-        u.db_cursor.execute(sql)
-        row = u.db_cursor.fetchone()
-        if row is not None:
-            return row['tb_name']
-        else:
-            return cls.create_data_table(ts)
+        try:
+            u = cls()
+            ts = data['ts']
+            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_data_index` WHERE `start_at` <= '{ts}' AND `end_at` >= '{ts}' LIMIT 1"
+            u.db_cursor.execute(sql)
+            row = u.db_cursor.fetchone()
+            if row is not None:
+                return row['tb_name']
+            else:
+                return cls.create_data_table(ts)
+        except:
+            traceback.print_exc()
+            raise UnknownError()
     
     @classmethod
     def get_last_day(cls, ts):
@@ -131,61 +137,49 @@ class utils():
     
     @classmethod
     def check_device_exists(cls, device:int):
-        u = cls()
-        sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} LIMIT 1"
-        u.db_cursor.execute(sql)
-        res = u.db_cursor.fetchone()
-        if res is None or not res['version'] == '2.0':
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} AND `type` = 'device' LIMIT 1"
+        try:
+            u = cls()
+            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} LIMIT 1"
             u.db_cursor.execute(sql)
             res = u.db_cursor.fetchone()
-            if res is None:
-                return False
-            else:
-                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {res['des']} LIMIT 1"
+            if res is None or not res['version'] == '2.0':
+                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} AND `type` = 'device' LIMIT 1"
                 u.db_cursor.execute(sql)
                 res = u.db_cursor.fetchone()
                 if res is None:
                     return False
                 else:
-                    return res
-        else:
-            # Check the device version
-            if res['version'] == '2.0':
-                if isinstance(res, int):
-                    sql = f"SELECT * FROM `devices` WHERE `id` = {res}"
+                    sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {res['des']} LIMIT 1"
                     u.db_cursor.execute(sql)
                     res = u.db_cursor.fetchone()
-                else:
-                    return res
+                    if res is None:
+                        return False
+                    else:
+                        return res
+            else:
+                # The device is version 2.0
+                # Check the device version
+                if res['version'] == '2.0':
+                    if isinstance(res, int):
+                        sql = f"SELECT * FROM `devices` WHERE `id` = {res}"
+                        u.db_cursor.execute(sql)
+                        res = u.db_cursor.fetchone()
+                    else:
+                        return res
+        except:
+            traceback.print_exc()
+            raise UnknownError()
 
     @classmethod
     def check_device_config_exists(cls, device_config_id: int, device: dict):
-        u = cls()
-        if isinstance(device, int):
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} LIMIT 1"
-            u.db_cursor.execute(sql)
-            device = u.db_cursor.fetchone()
-        if device['version'] == '2.0':
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_config` WHERE `id` = {device_config_id} LIMIT 1"
-            u.db_cursor.execute(sql)
-            res = u.db_cursor.fetchone()
-            if res is None:
-                return False
-            else:
-                if res['device_id'] == device['id']:
-                    return res
-                else:
-                    return False
-        else:
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device_config_id} AND `type` = 'device_config' LIMIT 1"
-            u.db_cursor.execute(sql)
-            res = u.db_cursor.fetchone()
-            if res is None:
-                return False
-            else:
-                new_config_id = res['des']
-                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_config` WHERE `id` = {new_config_id} LIMIT 1"
+        try:
+            u = cls()
+            if isinstance(device, int):
+                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} LIMIT 1"
+                u.db_cursor.execute(sql)
+                device = u.db_cursor.fetchone()
+            if device['version'] == '2.0':
+                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_config` WHERE `id` = {device_config_id} LIMIT 1"
                 u.db_cursor.execute(sql)
                 res = u.db_cursor.fetchone()
                 if res is None:
@@ -195,35 +189,64 @@ class utils():
                         return res
                     else:
                         return False
+            else:
+                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device_config_id} AND `type` = 'device_config' LIMIT 1"
+                u.db_cursor.execute(sql)
+                res = u.db_cursor.fetchone()
+                if res is None:
+                    return False
+                else:
+                    new_config_id = res['des']
+                    sql = f"SELECT * FROM `{DATA_DB_NAME}`.`device_config` WHERE `id` = {new_config_id} LIMIT 1"
+                    u.db_cursor.execute(sql)
+                    res = u.db_cursor.fetchone()
+                    if res is None:
+                        return False
+                    else:
+                        if res['device_id'] == device['id']:
+                            return res
+                        else:
+                            return False
+        except:
+            traceback.print_exc()
+            raise UnknownError()
 
     @classmethod
     def get_real_device(cls, device):
-        if isinstance(device, int):
-            device_id = device
-            t = 'int'
-        elif isinstance(device, dict):
-            device_id = device['id']
-            t = 'dict'
-        device_info = cls.check_device_exists(device_id)
-        if not device_info == False:
-            return device_info['id'] if t == 'int' else device_info
-        else:
-            return None
+        try:
+            if isinstance(device, int):
+                device_id = device
+                t = 'int'
+            elif isinstance(device, dict):
+                device_id = device['id']
+                t = 'dict'
+            device_info = cls.check_device_exists(device_id)
+            if device_info != False:
+                return device_info['id'] if t == 'int' else device_info
+            else:
+                return None
+        except:
+            traceback.print_exc()
+            raise UnknownError()
     
     @classmethod
     def get_real_config(cls, device, device_config):
-        if isinstance(device_config, int):
-            device_config_id = device_config
-            t = 'int'
-        elif isinstance(device_config, dict):
-            device_config_id = device_config['id']
-            t = 'dict'
-        if isinstance(device, int):
-            device_id = device
-        elif isinstance(device, dict):
-            device_id = device['id']
-        device_config_info = cls.check_device_config_exists(device_config_id, device_id)
-        if not device_config_info == False:
-            return device_config_info['id'] if t == 'int' else device_config_info
-        else:
-            return None
+        try:
+            if isinstance(device_config, int):
+                device_config_id = device_config
+                t = 'int'
+            elif isinstance(device_config, dict):
+                device_config_id = device_config['id']
+                t = 'dict'
+            if isinstance(device, int):
+                device_id = device
+            elif isinstance(device, dict):
+                device_id = device['id']
+            device_config_info = cls.check_device_config_exists(device_config_id, device_id)
+            if not device_config_info == False:
+                return device_config_info['id'] if t == 'int' else device_config_info
+            else:
+                return None
+        except:
+            traceback.print_exc()
+            raise UnknownError()
