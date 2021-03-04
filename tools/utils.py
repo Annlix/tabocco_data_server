@@ -30,7 +30,7 @@ class DataType(Enum):
 class utils():
     
     def __init__(self):
-        self.db_connector = connect(host=DB_HOST, port=DB_HOST_PORT, user=DATA_DB_USER, password=DATA_DB_PASSWORD, database=DATA_DB_NAME)
+        self.db_connector = connect(host=DB_HOST, port=DB_HOST_PORT, user=DATA_DB_USER, password=DATA_DB_PASSWORD, database=DATA_DB_NAME, autocommit=True)
         self.db_cursor = self.db_connector.cursor(dictionary=True)
 
     @classmethod

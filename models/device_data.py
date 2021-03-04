@@ -40,3 +40,6 @@ class Device_data(Base):
 
     device_id = Column(INTEGER(display_width=10), ForeignKey('device.id'))
     device = relationship('Device', back_populates='device_datas')
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>(table={self.__tablename__}, id={self.id}, data={self.data}, ts={self.ts}, updated_at={self.updated_at}, created_at={self.created_at}, deleted_at={self.deleted_at}, type={self.type}, device_id={self.device_id}, device_config_id={self.device_config_id})"

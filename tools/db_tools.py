@@ -15,7 +15,11 @@ from commons.macro import *
 from tools.common_tools import get_current_ts
 from tools.upyun_tools import save_to_upyun
 from models import Database_session, Device_config, Device_data, Database_session_sunsheen, \
-    device_config, Device, Device_data_confirm
+    device_config, Device, Device_data_confirm, Real_device_data
+from sqlalchemy import MetaData, Table, Column
+from sqlalchemy.orm import mapper, clear_mappers
+from sqlalchemy.dialects.mysql import INTEGER, VARCHAR, TIMESTAMP, DECIMAL, ENUM, JSON
+from sqlalchemy.schema import ForeignKey
 from importlib import reload
 from tools.utils import *
 from tools.aliyun_tools import *
@@ -264,6 +268,20 @@ def get_latest_device_config_json(device_id):
 #         print(e)
 #         pass
 
+def get_real_data_table(table_name):
+    meta_data = MetaData()
+    device_data = Table(table_name, meta_data, 
+        Column('id', INTEGER(display_width=10), primary_key=True),
+        Column('data', JSON),
+        Column('ts', TIMESTAMP, nullable=True),
+        Column('updated_at', TIMESTAMP, nullable=False),
+        Column('created_at', TIMESTAMP, nullable=False),
+        Column('deleted_at', TIMESTAMP, nullable=True),
+        Column('type', VARCHAR, nullable=False),
+        Column('device_config_id', INTEGER(display_width=10), ForeignKey('device_config.id')),
+        Column('device_id', INTEGER(display_width=10), ForeignKey('devices.id'))
+    )
+    mapper(Real_device_data, device_data)
 
 def save_json_data(json_data):
     try:
@@ -293,25 +311,31 @@ def save_json_data(json_data):
                         device_image_data = Device_data(device_id=dict_data['device_id'],
                                                         device_config_id=dict_data['device_config_id'],
                                                         type=dict_data['type'], ts=dict_data['ts'], data=dict_data['data'])
-                        print("SAVED", device_image_data.__dict__)
                         session.add(device_image_data)
+                        session.commit()
+                        print("SAVED", device_image_data.__dict__)
                         if dict_data['device_id'] == 54:
                             device_image_data_sunsheen = Device_data(device_id=dict_data['device_id'],
                                                                     device_config_id=dict_data['device_config_id'],
                                                                     ts=dict_data['ts'], data=dict_data['data'])
-                            print("SAVED", device_image_data_sunsheen.__dict__)
                             save_json_data_sunsheen(device_image_data_sunsheen)
+                            print("SAVED", device_image_data_sunsheen.__dict__)
                     else:
                         print("Save image to upyun fail")
                 else:
-                    Device_data.__table__.name = utils.get_data_table_name(dict_data)
-                    device_value_data = Device_data(device_id=dict_data['device_id'],
+                    table_name = utils.get_data_table_name(dict_data)
+                    Device_data.__table__.name = table_name
+                    # get_real_data_table(table_name)
+                    device_value_data = Device_data(data=dict_data['data'],
+                                                    ts=dict_data['ts'],
                                                     type=dict_data['type'],
                                                     device_config_id=dict_data['device_config_id'],
-                                                    ts=dict_data['ts'],
-                                                    data=dict_data['data'])
-                    print("SAVED", device_value_data.__dict__)
+                                                    device_id=dict_data['device_id'],
+                                                    )
+                    print(device_value_data)
                     session.add(device_value_data)
+                    session.commit()
+                    print("SAVED", device_value_data.__dict__)
                     if dict_data['device_id'] == 54:
                         device_value_data_sunsheen = Device_data(device_id=dict_data['device_id'],
                                                                 device_config_id=dict_data['device_config_id'],
@@ -338,6 +362,7 @@ def save_json_data_sunsheen(data):
     try:
         with Database_session_sunsheen() as session:
             session.add(data)
+            session.commit()
     except Exception as e:
         logging.info(e)
         traceback.print_exc()
