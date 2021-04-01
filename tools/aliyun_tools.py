@@ -44,6 +44,7 @@ class AliyunOss:
                 with open(image_path, "rb") as fp:
                     file_content = fp.read()
                 res = alioss.bucket.put_object(image_value, file_content)
+                os.remove(image_path)
                 return True
         except oss2.exceptions.ClientError as e:
             print("ClientError", e)

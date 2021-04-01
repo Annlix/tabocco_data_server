@@ -139,33 +139,46 @@ class utils():
     def check_device_exists(cls, device:int):
         try:
             u = cls()
-            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} LIMIT 1"
+            sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} AND `type` = 'device' LIMIT 1"
             u.db_cursor.execute(sql)
             res = u.db_cursor.fetchone()
-            if res is None or not res['version'] == '2.0':
-                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} AND `type` = 'device' LIMIT 1"
+            if res is None:
+                return False
+            else:
+                sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {res['des']} LIMIT 1"
                 u.db_cursor.execute(sql)
                 res = u.db_cursor.fetchone()
                 if res is None:
                     return False
                 else:
-                    sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {res['des']} LIMIT 1"
-                    u.db_cursor.execute(sql)
-                    res = u.db_cursor.fetchone()
-                    if res is None:
-                        return False
-                    else:
-                        return res
-            else:
-                # The device is version 2.0
-                # Check the device version
-                if res['version'] == '2.0':
-                    if isinstance(res, int):
-                        sql = f"SELECT * FROM `devices` WHERE `id` = {res}"
-                        u.db_cursor.execute(sql)
-                        res = u.db_cursor.fetchone()
-                    else:
-                        return res
+                    return res
+            # sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {device} AND `version` = '1.0' LIMIT 1"
+            # u.db_cursor.execute(sql)
+            # res = u.db_cursor.fetchone()
+            # if res is None or not res['version'] == '2.0':
+            #     sql = f"SELECT * FROM `{DATA_DB_NAME}`.`mg_relation` WHERE `src` = {device} AND `type` = 'device' LIMIT 1"
+            #     u.db_cursor.execute(sql)
+            #     res = u.db_cursor.fetchone()
+            #     if res is None:
+            #         return False
+            #     else:
+            #         sql = f"SELECT * FROM `{DATA_DB_NAME}`.`devices` WHERE `id` = {res['des']} LIMIT 1"
+            #         u.db_cursor.execute(sql)
+            #         res = u.db_cursor.fetchone()
+            #         if res is None:
+            #             return False
+            #         else:
+            #             return res
+            # else:
+            #     # The device is version 2.0
+            #     # Check the device version
+            #     if res['version'] == '2.0':
+            #         if isinstance(res, int):
+            #             sql = f"SELECT * FROM `devices` WHERE `id` = {res}"
+            #             u.db_cursor.execute(sql)
+            #             res = u.db_cursor.fetchone()
+            #         else:
+            #             return res
         except:
             traceback.print_exc()
             raise UnknownError()
@@ -203,7 +216,7 @@ class utils():
                     if res is None:
                         return False
                     else:
-                        if res['device_id'] == device['id']:
+                        if res['device_id'] == device:
                             return res
                         else:
                             return False
