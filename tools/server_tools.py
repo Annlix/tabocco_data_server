@@ -76,7 +76,7 @@ def get_data_to_save(request, ts, data):
     try:
         for item in data:
             if not isinstance(data[item], dict) or 'value' not in data[item]:
-                data[item] = dict(value=item)
+                data[item] = dict(value=data[item])
         tmp_data = {'type': 'data', 'device_id': request['device_id'], 'device_config_id': request['device_config_id'],
                     'data': data, 'ts': get_datetime_str_from_ts(ts)}
         

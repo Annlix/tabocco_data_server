@@ -9,6 +9,7 @@ import mysql.connector
 import json
 from pip._internal.utils import temp_dir
 import traceback
+import time
 
 sys.path.append('../')
 from commons.macro import *
@@ -304,20 +305,22 @@ def save_json_data(json_data):
                 #     raise Exception("This device configure is not exists.")
                 # dict_data['device_id'] = new_id
                 # dict_data['device_config_id'] = new_config_id
+                now = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
                 if dict_data['type'] == 'image':
                     if save_to_upyun(dict_data):
                         AliyunOss.upload_image(dict_data)
                         Device_data.__table__.name = utils.get_data_table_name(dict_data)
                         device_image_data = Device_data(device_id=dict_data['device_id'],
                                                         device_config_id=dict_data['device_config_id'],
-                                                        type=dict_data['type'], ts=dict_data['ts'], data=dict_data['data'])
+                                                        type=dict_data['type'], ts=now, data=dict_data['data'])
+                        print(f"DEBUG TS{device_image_data}")
                         session.add(device_image_data)
                         session.commit()
                         print("SAVED", device_image_data.__dict__)
                         if dict_data['device_id'] == 54:
                             device_image_data_sunsheen = Device_data(device_id=dict_data['device_id'],
                                                                     device_config_id=dict_data['device_config_id'],
-                                                                    ts=dict_data['ts'], data=dict_data['data'])
+                                                                    ts=now, data=dict_data['data'])
                             save_json_data_sunsheen(device_image_data_sunsheen)
                             print("SAVED", device_image_data_sunsheen.__dict__)
                     else:
@@ -327,19 +330,19 @@ def save_json_data(json_data):
                     Device_data.__table__.name = table_name
                     # get_real_data_table(table_name)
                     device_value_data = Device_data(data=dict_data['data'],
-                                                    ts=dict_data['ts'],
+                                                    ts=now,
                                                     type=dict_data['type'],
                                                     device_config_id=dict_data['device_config_id'],
                                                     device_id=dict_data['device_id'],
                                                     )
-                    print(device_value_data)
+                    print("DEBUG TS", device_value_data)
                     session.add(device_value_data)
                     session.commit()
                     print("SAVED", device_value_data.__dict__)
                     if dict_data['device_id'] == 54:
                         device_value_data_sunsheen = Device_data(device_id=dict_data['device_id'],
                                                                 device_config_id=dict_data['device_config_id'],
-                                                                ts=dict_data['ts'], data=dict_data['data'])
+                                                                ts=now, data=dict_data['data'])
                         print("SAVED", device_value_data_sunsheen.__dict__)
                         save_json_data_sunsheen(device_value_data_sunsheen)
                 logging.info('after execution')
