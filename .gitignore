@@ -26,3 +26,4 @@ iot_server_tcp.rdb
 !redis_iot_server_tcp_10022.conf
 !supervisor.conf
 !/test
+/venv
